@@ -1,0 +1,84 @@
+# Node.js
+node_modules/
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# pnpm store
+.pnpm-store/
+
+# Lock files（通常你会提交锁文件，这里保留，不忽略）
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Build output
+dist/
+build/
+out/
+lib/
+
+# TypeScript
+*.tsbuildinfo
+
+# Coverage directory
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+
+# Mac system files
+.AppleDouble
+.LSOverride
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Jest cache
+jest-cache/
+jest/
+.cache/
+
+# pnpm workspace specific
+.pnp.*
+.pnpm-debug.log
+
+# Others
+*.bak
+*.backup
+
+# Ignore package-specific files if any
+**/node_modules/
+**/dist/
+**/build/
+**/coverage/
