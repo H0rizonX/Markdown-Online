@@ -1,0 +1,1 @@
+export type dataType =  object | string | Array<object>
