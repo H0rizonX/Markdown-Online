@@ -1,5 +1,5 @@
 // src/service/UserService.ts
-import { database } from "../db";
+import { database } from "../config/database";
 import { Users } from "../entity/user";
 
 export class UserService {
@@ -13,10 +13,17 @@ export class UserService {
     return this.repo.save(data);
   }
 
+  // 做注销使用 || 踢出房间
   delete(id: number) {
     return this.repo.delete(id);
   }
-  async login(identifier: number | string) {
+
+  async update(id: number, data: Partial<Users>) {
+    const result = await this.repo.update(id, data);
+    return result;
+  }
+
+  async getUser(identifier: number | string) {
     let user;
     if (typeof identifier === "number") {
       user = await this.repo.findOne({ where: { id: identifier } });

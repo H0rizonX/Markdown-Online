@@ -13,14 +13,14 @@ function result(req: Request, res: Response, next: NextFunction) {
     data: T,
     code = 200,
     message = "操作成功",
-    display = 1
+    status = 0
   ) {
-    res.status(code).json({ code, message, data, display });
+    res.status(code).json({ code, message, data, status });
   };
 
-  res.fail = function (err: string | Error, code = 400, display = 1) {
+  res.fail = function (err: string | Error, code = 200, status = 1) {
     const message = err instanceof Error ? err.message : err;
-    res.status(code).json({ code, message, data: null, display });
+    res.status(code).json({ code, message, data: null, status });
   };
 
   next();

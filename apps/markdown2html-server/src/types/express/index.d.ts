@@ -8,8 +8,8 @@ declare module "express" {
       data: T,
       code?: number,
       message?: string,
-      display?: number
+      status?: number
     ) => void;
-    fail: (err: string | Error, code?: number, display?: number) => void;
+    fail: (err: string | Error, code?: number, status?: number) => void;
   }
 }
