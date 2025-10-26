@@ -1,0 +1,50 @@
+/* stylelint-disable at-rule-no-unknown */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-main-color: #f6f9ff;
+    --border-color: #e5e7ec;
+
+    /** 主色 */
+    --primary-color: #4e71f7;
+
+    /** 辅助色 */
+    --info-color: #4098ff;
+    --success-color: #00d98f;
+    --warning-color: #ffae1a;
+    --error-color: #ff5151;
+
+    /** 文字色 */
+    --main-color: #171820;
+    --secondary-color-1: #4a4b4e;
+    --secondary-color-2: #777a80;
+    --secondary-color-3: #9397a0;
+    --secondary-color-4: #afb1b9;
+    --secondary-color-5: #c2c4ca;
+
+    /** 中性色 */
+    --selected-color: #f4f7ff;
+    --active-color: #eef2fb;
+
+    /** 分割线 */
+    --split-line-color: #eaecef;
+
+    /** 图标色 */
+    --icon-color-4: #8b8f97;
+
+    /* 编辑器颜色 */
+    --gray-1: #f3f4f6;
+    --gray-2: #e5e7eb;
+    --gray-3: #d1d5db;
+    --gray-4: #9ca3af;
+    --gray-5: #6b7280;
+    --gray-6: #4b5563;
+
+    --black: #111827;
+    --white: #ffffff;
+    --purple: #8b5cf6;
+  }
+}
