@@ -6,7 +6,7 @@ export const transporterQQ = nodemailer.createTransport({
   secure: true,
   auth: {
     user: "fordream.you@qq.com",
-    pass: "nrqkcyimypdqhbhi",
+    pass: "luvknlkqvmtffgib",
   },
 });
 

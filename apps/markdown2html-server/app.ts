@@ -3,6 +3,7 @@ import cors from "cors";
 import { result } from "./src/utils";
 import { database } from "./src/config/database";
 import userRoutes from "./src/controller/userController";
+import articleRoutes from "./src/controller/articleController";
 // import redis from "redis";
 // import nodemailer from "nodemailer";
 /* import { expressjwt } from "express-jwt";
@@ -34,6 +35,7 @@ database
     console.log("Database connected");
 
     app.use("/users", userRoutes);
+    app.use("/article", articleRoutes);
 
     app.listen(3003, () =>
       console.log("Server started at http://localhost:3003")

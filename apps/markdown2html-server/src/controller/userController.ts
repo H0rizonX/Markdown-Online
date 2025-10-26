@@ -44,6 +44,7 @@ router.post(
   async (req: Request, res: Response) => {
     const data = { ...req.body };
 
+    const dbUser = await userService.getUser(data.email);
     const codeKey = `email:code:${data.code}`;
     const emailFromRedis = await redis.get(codeKey);
 
@@ -53,6 +54,10 @@ router.post(
 
     if (emailFromRedis !== data.email) {
       return res.fail("邮箱已修改，请重新获取验证码");
+    }
+
+    if (dbUser) {
+      return res.fail("该邮箱已注册，请勿重复！");
     }
 
     if (data.id) return res.fail("错误请求");
