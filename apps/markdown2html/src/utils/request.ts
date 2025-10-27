@@ -5,8 +5,11 @@ import type {
   AxiosResponse,
   AxiosError,
 } from "axios";
+import { getMessageApi } from "./globalMessage";
+import { useTokenStore } from "../store/token";
 
-import { getToken } from "./token";
+// 全局message提示
+const msgBox = getMessageApi();
 import type { resType } from "../types/common";
 // 新增：引入全局提示
 import { message } from "antd";
@@ -19,7 +22,7 @@ const request: AxiosInstance = axios.create({
 // 请求拦截器
 request.interceptors.request.use(
   function (config: InternalAxiosRequestConfig) {
-    const token = getToken();
+    const token = useTokenStore.getState().token;
     if (token && config.headers) {
       config.headers.Authorization = token;
     }
@@ -39,6 +42,10 @@ request.interceptors.response.use(
     //   );
     //   return Promise.reject(response);
     // }
+
+    // 展示该信息
+    if (response.data.status === 1) msgBox.success(response.data.message);
+
     return Promise.resolve(response.data as AxiosResponse<T>);
   },
   function (error: AxiosError<resType>) {

@@ -12,6 +12,8 @@ import {
   type resetType,
 } from "./service";
 import { getMessageApi } from "../../../utils";
+import type { dataType } from "../../../types/common";
+import { useTokenStore } from "../../../store/token";
 
 const LoginPage = () => {
   const [loading, setLoading] = useState(false);
@@ -19,7 +21,6 @@ const LoginPage = () => {
   const [form] = Form.useForm();
   const [resetForm] = Form.useForm();
   const navigator = useNavigate();
-
   // 倒计时状态
   const [countdown, setCountdown] = useState(0);
   const [resetCountdown, setResetCountdown] = useState(0);
@@ -75,21 +76,15 @@ const LoginPage = () => {
     try {
       if (isLogin) {
         const res = await Login(values as LoginType);
-        if (res.status === 0) {
-          navigator("/");
-          msgBox.success(res.message);
-        } else {
-          msgBox.warning(res.message);
-        }
+        navigator("/");
+
+        const token = (res.data as dataType).token;
+
+        useTokenStore.getState().setToken(token ?? null);
       } else {
-        const res = await Register(values as registerType);
-        if (res.status === 0) {
-          msgBox.success(res.message);
-          setIsLogin(true);
-          form.resetFields();
-        } else {
-          msgBox.warning(res.message);
-        }
+        await Register(values as registerType);
+        setIsLogin(true);
+        form.resetFields();
       }
     } catch (error) {
       msgBox.error(isLogin ? "登录失败" : "注册失败");
@@ -107,11 +102,6 @@ const LoginPage = () => {
       password,
     };
     const res = await resetPassword(resetValue);
-    console.log(res, "重置密码的结果");
-    if (res.status === 1) {
-      msgBox.info(res.message);
-      return;
-    }
 
     msgBox.success(res.message);
     setForgotVisible(false);
