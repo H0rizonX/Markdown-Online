@@ -1,4 +1,4 @@
 import result from "./result";
-import randomNum from "./randomNum";
+import { generateSnowflakeId, generateShortId } from "./Snowflake";
 import { transporterQQ } from "./email";
-export { result, randomNum, transporterQQ };
+export { result, generateSnowflakeId, generateShortId, transporterQQ };

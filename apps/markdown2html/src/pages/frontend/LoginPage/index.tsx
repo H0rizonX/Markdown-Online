@@ -1,113 +1,124 @@
 import { useState, useEffect } from "react";
-import { Button, Input, Form, message } from "antd";
+import { Button, Input, Form, Modal } from "antd";
 import { useNavigate } from "react-router-dom";
 import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
 import {
   Login,
   Register,
   sendEmail,
+  resetPassword,
   type LoginType,
   type registerType,
+  type resetType,
 } from "./service";
+import { getMessageApi } from "../../../utils";
 
-const AuthPage = () => {
+const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
-  const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm();
+  const [resetForm] = Form.useForm();
   const navigator = useNavigate();
 
-  // 新增倒计时状态，初始为0（未倒计时）
+  // 倒计时状态
   const [countdown, setCountdown] = useState(0);
+  const [resetCountdown, setResetCountdown] = useState(0);
 
+  // 忘记密码弹窗状态
+  const [forgotVisible, setForgotVisible] = useState(false);
+
+  // 弹窗
+  const msgBox = getMessageApi();
   type AuthValues = Partial<LoginType & registerType>;
 
-  // 发送验证码
-  const sendCode = async () => {
-    const email = form.getFieldValue("email");
+  // === 通用验证码发送函数 ===
+  const handleSendCode = async (
+    email: string,
+    setTimer: React.Dispatch<React.SetStateAction<number>>
+  ) => {
     if (!email) {
-      messageApi.open({
-        type: "warning",
-        content: "请输入正确的邮箱",
-      });
+      msgBox.warning("请输入正确的邮箱");
       return;
     }
     try {
       const res = await sendEmail({ email });
-      console.log(res.status, "status");
-      console.log(res, "res");
-      messageApi.open({
+      msgBox.open({
         type: +res.status ? "warning" : "success",
         content: res.message,
       });
-
       if (+res.status === 0) {
-        setCountdown(60);
+        setTimer(60);
       }
     } catch (error) {
-      messageApi.error("验证码发送失败");
+      msgBox.error("验证码发送失败");
       console.error(error);
     }
   };
 
-  // useEffect 实现倒计时逻辑
+  // 登录注册验证码倒计时
   useEffect(() => {
-    if (countdown <= 0) return; // 倒计时结束
-
-    const timer = setTimeout(() => {
-      setCountdown(countdown - 1);
-    }, 1000);
-
+    if (countdown <= 0) return;
+    const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  // 统一处理登录和注册
+  // 忘记密码验证码倒计时
+  useEffect(() => {
+    if (resetCountdown <= 0) return;
+    const timer = setTimeout(() => setResetCountdown(resetCountdown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resetCountdown]);
+
+  // === 登录注册提交 ===
   const handleFinish = async (values: AuthValues) => {
     setLoading(true);
     try {
       if (isLogin) {
-        const loginData = values as LoginType;
-        const res = await Login(loginData);
+        const res = await Login(values as LoginType);
         if (res.status === 0) {
           navigator("/");
-          messageApi.open({
-            type: "success",
-            content: res.message,
-          });
+          msgBox.success(res.message);
         } else {
-          messageApi.open({
-            type: "warning",
-            content: res.message,
-          });
+          msgBox.warning(res.message);
         }
       } else {
-        const registerData = values as registerType;
-        const res = await Register(registerData);
+        const res = await Register(values as registerType);
         if (res.status === 0) {
+          msgBox.success(res.message);
           setIsLogin(true);
-          messageApi.open({
-            type: "success",
-            content: res.message,
-          });
           form.resetFields();
         } else {
-          messageApi.open({
-            type: "warning",
-            content: res.message,
-          });
+          msgBox.warning(res.message);
         }
       }
     } catch (error) {
-      messageApi.error(isLogin ? "登录失败" : "注册失败");
+      msgBox.error(isLogin ? "登录失败" : "注册失败");
       console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleResetPassword = async (value: resetType) => {
+    const { email, code, password } = value;
+    const resetValue: resetType = {
+      email,
+      code,
+      password,
+    };
+    const res = await resetPassword(resetValue);
+    console.log(res, "重置密码的结果");
+    if (res.status === 1) {
+      msgBox.info(res.message);
+      return;
+    }
+
+    msgBox.success(res.message);
+    setForgotVisible(false);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      {contextHolder}
       <div className="max-w-md w-full bg-white p-8 rounded shadow-md">
         <h2 className="text-2xl font-semibold mb-6 text-center">
           {isLogin ? "欢迎登录" : "邮箱注册"}
@@ -141,6 +152,20 @@ const AuthPage = () => {
                   placeholder="请输入密码"
                 />
               </Form.Item>
+
+              {/* 忘记密码按钮 */}
+              <div className="text-right mb-3">
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => {
+                    setForgotVisible(true);
+                    resetForm.resetFields();
+                  }}
+                >
+                  忘记密码？
+                </Button>
+              </div>
             </>
           ) : (
             <>
@@ -164,10 +189,15 @@ const AuthPage = () => {
                   placeholder="请输入邮箱验证码"
                   addonAfter={
                     <Button
-                      onClick={sendCode}
+                      onClick={() =>
+                        handleSendCode(
+                          form.getFieldValue("email"),
+                          setCountdown
+                        )
+                      }
                       type="link"
-                      style={{ padding: 0 }}
-                      disabled={countdown > 0} // 倒计时期间禁用按钮
+                      style={{ padding: 0, height: "30px" }}
+                      disabled={countdown > 0}
                     >
                       {countdown > 0 ? `${countdown}s 后重发` : "发送验证码"}
                     </Button>
@@ -245,8 +275,95 @@ const AuthPage = () => {
           </Form.Item>
         </Form>
       </div>
+
+      {/* === 忘记密码弹窗 === */}
+      <Modal
+        title="重置密码"
+        open={forgotVisible}
+        onCancel={() => setForgotVisible(false)}
+        footer={null}
+        destroyOnClose
+      >
+        <Form form={resetForm} layout="vertical" onFinish={handleResetPassword}>
+          <Form.Item
+            label="邮箱"
+            name="email"
+            rules={[
+              { required: true, message: "请输入邮箱" },
+              { type: "email", message: "请输入有效的邮箱地址" },
+            ]}
+          >
+            <Input prefix={<MailOutlined />} placeholder="请输入邮箱" />
+          </Form.Item>
+
+          <Form.Item
+            label="验证码"
+            name="code"
+            rules={[{ required: true, message: "请输入验证码" }]}
+          >
+            <Input
+              placeholder="请输入邮箱验证码"
+              addonAfter={
+                <Button
+                  onClick={() =>
+                    handleSendCode(
+                      resetForm.getFieldValue("email"),
+                      setResetCountdown
+                    )
+                  }
+                  type="link"
+                  style={{ padding: 0, height: "30px" }}
+                  disabled={resetCountdown > 0}
+                >
+                  {resetCountdown > 0
+                    ? `${resetCountdown}s 后重发`
+                    : "发送验证码"}
+                </Button>
+              }
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="新密码"
+            name="password"
+            rules={[
+              { required: true, message: "请输入新密码" },
+              { min: 6, message: "密码至少6位" },
+            ]}
+            hasFeedback
+          >
+            <Input.Password placeholder="请输入新密码" />
+          </Form.Item>
+
+          <Form.Item
+            label="确认新密码"
+            name="confirm"
+            dependencies={["password"]}
+            hasFeedback
+            rules={[
+              { required: true, message: "请确认新密码" },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue("password") === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error("两次密码输入不一致"));
+                },
+              }),
+            ]}
+          >
+            <Input.Password placeholder="请确认新密码" />
+          </Form.Item>
+
+          <Form.Item>
+            <Button type="primary" htmlType="submit" block loading={loading}>
+              重置密码
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };
 
-export default AuthPage;
+export default LoginPage;

@@ -3,7 +3,7 @@ import express, { Response, Request } from "express";
 import { UserService } from "../service/userService";
 import expressJoi from "@escook/express-joi";
 import { userCreateSchema } from "../schema/user";
-import { randomNum } from "../utils";
+import { generateShortId, generateSnowflakeId } from "../utils";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { webToken } from "../../config";
@@ -61,10 +61,10 @@ router.post(
     }
 
     if (data.id) return res.fail("错误请求");
-    data.id = Number(randomNum());
+    data.id = Number(generateShortId());
 
     if (!data.name) {
-      data.name = "user" + (Number(randomNum()) % 1000);
+      data.name = "user" + (Number(generateSnowflakeId()) % 1000);
     }
 
     if (!data.avatar) {

@@ -150,6 +150,9 @@ importers:
       bcryptjs:
         specifier: ^3.0.2
         version: 3.0.2
+      biguint-format:
+        specifier: ^1.0.2
+        version: 1.0.2
       class-validator:
         specifier: ^0.14.2
         version: 0.14.2
@@ -162,6 +165,9 @@ importers:
       express-jwt:
         specifier: ^8.5.1
         version: 8.5.1
+      flake-idgen:
+        specifier: ^1.4.0
+        version: 1.4.0
       ioredis:
         specifier: ^5.6.1
         version: 5.8.2
@@ -183,6 +189,9 @@ importers:
       typeorm:
         specifier: ^0.3.25
         version: 0.3.27(ioredis@5.8.2)(mysql2@3.15.3)(reflect-metadata@0.2.2)(ts-node@10.9.2(@types/node@24.9.1)(typescript@5.8.3))
+      uuid:
+        specifier: ^8.3.2
+        version: 8.3.2
       ws:
         specifier: ^8.18.3
         version: 8.18.3
@@ -1362,6 +1371,9 @@ packages:
     resolution: {integrity: sha512-pbnl5XzGBdrFU/wT4jqmJVPn2B6UHPBOhzMQkY/SPUPB6QtUXtmBHBIwCbXJol93mOpGMnQyP/+BB19q04xj7g==}
     engines: {node: '>=4'}
 
+  biguint-format@1.0.2:
+    resolution: {integrity: sha512-A9/8NoHnszWRAp4WCrgwe70wMd0FVDB3pXTdKs78z3pgwHRhc/BGU3uO7Wmfp9ueWD5WpmncL1OpypGnvc1R3w==}
+
   binary-extensions@2.3.0:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
     engines: {node: '>=8'}
@@ -1919,6 +1931,9 @@ packages:
   find-up@7.0.0:
     resolution: {integrity: sha512-YyZM99iHrqLKjmt4LJDj58KI+fYyufRLBSYcqycxf//KpBk9FoewoGX0450m9nB44qrZnovzC2oeP5hUibxc/g==}
     engines: {node: '>=18'}
+
+  flake-idgen@1.4.0:
+    resolution: {integrity: sha512-l+dtBcIAwAPqmtDelZAAw0NzKOBosiu/3hAFH69W3n1rH8wkKN1hUp6SaR1tmH/NmzaCUQs1BFKULKVhqGWdMw==}
 
   flat-cache@3.2.0:
     resolution: {integrity: sha512-CYcENa+FtcUKLmhhqyctpclsq7QF38pKjZHsGNiSQF5r4FtoKDWabFDl3hzaEQMvT1LHEysw5twgLvpYYb4vbw==}
@@ -3633,6 +3648,10 @@ packages:
     resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
     hasBin: true
 
+  uuid@8.3.2:
+    resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    hasBin: true
+
   v8-compile-cache-lib@3.0.1:
     resolution: {integrity: sha512-wa7YjyUGfNZngI/vtK0UHAN+lgDCxBPCylVXGp0zu59Fz5aiGtNXaq3DhIov063MorB+VfufLh3JlF2KdTK3xg==}
 
@@ -5199,6 +5218,8 @@ snapshots:
     dependencies:
       is-windows: 1.0.2
 
+  biguint-format@1.0.2: {}
+
   binary-extensions@2.3.0: {}
 
   body-parser@1.20.3:
@@ -5842,6 +5863,8 @@ snapshots:
       locate-path: 7.2.0
       path-exists: 5.0.0
       unicorn-magic: 0.1.0
+
+  flake-idgen@1.4.0: {}
 
   flat-cache@3.2.0:
     dependencies:
@@ -7571,6 +7594,8 @@ snapshots:
   utils-merge@1.0.1: {}
 
   uuid@11.1.0: {}
+
+  uuid@8.3.2: {}
 
   v8-compile-cache-lib@3.0.1: {}
 

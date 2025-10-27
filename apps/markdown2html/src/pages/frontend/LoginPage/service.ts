@@ -12,6 +12,10 @@ export type registerType = {
   password?: string;
 };
 
+export type resetType = registerType & {
+  code: string; // 验证码
+};
+
 export const Login = async (params: LoginType): Promise<resType> => {
   return await request.post("/users", params);
 };
@@ -24,4 +28,8 @@ export const sendEmail = async (params: registerType): Promise<resType> => {
 // 注册
 export const Register = async (params: registerType): Promise<resType> => {
   return await request.post("/users/register", params);
+};
+
+export const resetPassword = async (params: registerType): Promise<resType> => {
+  return await request.post("/users/reset-password", params);
 };

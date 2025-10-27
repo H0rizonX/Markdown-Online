@@ -7,7 +7,13 @@
   "scripts": {
     "release": "standard-version",
     "release-and-push": "sh scripts/release-and-push.sh",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "dev:frontend": "pnpm --filter markdown2html  dev",
+    "dev:backend": "pnpm --filter markdown2html-server dev",
+    "dev": "pnpm -r --parallel --filter markdown2html --filter markdown2html-server dev",
+    "build:frontend": "pnpm --filter markdown2html build",
+    "build:backend": "pnpm --filter markdown2html-server build",
+    "build": "pnpm -r --filter markdown2html --filter markdown2html-server build"
   },
   "keywords": [],
   "author": "",

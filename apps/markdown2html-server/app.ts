@@ -4,10 +4,14 @@ import { result } from "./src/utils";
 import { database } from "./src/config/database";
 import userRoutes from "./src/controller/userController";
 import articleRoutes from "./src/controller/articleController";
+import { CollabService } from "./src/service/CollabService";
 // import redis from "redis";
 // import nodemailer from "nodemailer";
 /* import { expressjwt } from "express-jwt";
 import { webToken } from "./config"; */
+
+export const server = new CollabService(8990);
+server.start();
 
 const app: Express = express();
 
@@ -29,6 +33,7 @@ app.use(express.json());
     ],
   })
 ); */
+
 database
   .initialize()
   .then(() => {
