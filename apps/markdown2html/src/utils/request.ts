@@ -24,7 +24,7 @@ request.interceptors.request.use(
   function (config: InternalAxiosRequestConfig) {
     const token = useTokenStore.getState().token;
     if (token && config.headers) {
-      config.headers.Authorization = token;
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },

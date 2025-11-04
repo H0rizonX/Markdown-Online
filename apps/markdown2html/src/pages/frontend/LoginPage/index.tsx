@@ -7,13 +7,13 @@ import {
   Register,
   sendEmail,
   resetPassword,
-  type LoginType,
-  type registerType,
   type resetType,
 } from "./service";
 import { getMessageApi } from "../../../utils";
 import type { dataType } from "../../../types/common";
 import { useTokenStore } from "../../../store/token";
+import { useUserStore } from "../../../store/user";
+import type { LoginType, registerType } from "./interface";
 
 const LoginPage = () => {
   const [loading, setLoading] = useState(false);
@@ -76,11 +76,12 @@ const LoginPage = () => {
     try {
       if (isLogin) {
         const res = await Login(values as LoginType);
-        navigator("/");
 
         const token = (res.data as dataType).token;
-
+        const user = (res.data as dataType).user;
         useTokenStore.getState().setToken(token ?? null);
+        useUserStore.getState().login(user!);
+        navigator("/");
       } else {
         await Register(values as registerType);
         setIsLogin(true);

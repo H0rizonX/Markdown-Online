@@ -1,12 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-
-type UserType = {
-  id: number;
-  name: string;
-  email: string;
-  avatar: string;
-};
+import type { UserType } from "../types/common";
 
 type UserStore = {
   userInfo: UserType | null;
@@ -16,7 +10,7 @@ type UserStore = {
   updateUser: (newInfo: Partial<UserType>) => void; // Partial 允许只更新部分字段
 };
 
-const useUserStore = create<UserStore>()(
+export const useUserStore = create<UserStore>()(
   persist(
     (set) => ({
       userInfo: null,
