@@ -30,6 +30,9 @@ const currentUserAvatar = ['🟣', '🫧', '🦄', '🌟', '💫', '✨', '🔮'
 
 const messages = ref<ChatMessage[]>([])
 
+// 初始欢迎语（仅本地展示一次）
+const WELCOME_TEXT = '✨ 欢迎来到协同编辑聊天室～ 实时共创、即时聊天，一键开启协作吧！🎉'
+
 const inputText = ref('')
 const isHovered = ref(false)
 const isFocused = ref(false)
@@ -204,6 +207,8 @@ const createPeer = async (peerId: number): Promise<RTCPeerConnection> => {
     audio.srcObject = ev.streams[0]
     audio.muted = !(speakerEnabled.value) || deafened.value
     audio.volume = speakerEnabled.value && !deafened.value ? 1 : 0
+    // 主动尝试播放，规避部分浏览器的自动播放限制
+    try { audio.play?.() } catch {}
   }
 
   // 当我们添加/移除轨道后，触发重新协商；为避免 glare，仅由较小 ID 的一端发起
@@ -397,8 +402,31 @@ const onKeydown = (e: KeyboardEvent) => {
 }
 
 onMounted(() => {
+  // 本地欢迎消息（仅在当前会话首次渲染时显示）
+  if (messages.value.length === 0) {
+    messages.value.push({
+      id: 'welcome-msg',
+      userId: 0,
+      name: '系统',
+      avatar: '✨',
+      text: WELCOME_TEXT,
+      timestamp: Date.now()
+    })
+  }
   connect()
   scrollToBottom()
+  // 首次用户手势时，统一解锁远端音频播放
+  const unlock = () => {
+    for (const [, a] of remoteAudios.value) {
+      try { a.muted = !(speakerEnabled.value) || deafened.value; a.volume = speakerEnabled.value && !deafened.value ? 1 : 0; a.play?.() } catch {}
+    }
+    window.removeEventListener('click', unlock)
+    window.removeEventListener('touchstart', unlock)
+    window.removeEventListener('keydown', unlock)
+  }
+  window.addEventListener('click', unlock, { once: true })
+  window.addEventListener('touchstart', unlock, { once: true })
+  window.addEventListener('keydown', unlock, { once: true })
   // 上线广播 presence
   const sendPresence = () => {
     try { ws.value?.send(JSON.stringify({ type: 'presence', userId: currentUserId })) } catch {}
@@ -427,20 +455,24 @@ onBeforeUnmount(() => {
 type TimelineItem = { kind: 'msg', id: string, userId: number, name?: string, avatar?: string, text: string, timestamp: number } | { kind: 'sep', at: number, key: string }
 const timeline = computed<TimelineItem[]>(() => {
   const items: TimelineItem[] = []
-  let lastTs = 0
+  let lastNonSystemTs = 0
   const FIVE_MIN = 5 * 60 * 1000
   for (const m of messages.value) {
-    if (!lastTs || m.timestamp - lastTs >= FIVE_MIN) {
+    const isSystem = m.userId === 0 || m.id === 'welcome-msg'
+    if (!lastNonSystemTs || (!isSystem && (m.timestamp - lastNonSystemTs >= FIVE_MIN))) {
       items.push({ kind: 'sep', at: m.timestamp, key: `sep-${m.timestamp}` })
     }
     items.push({ kind: 'msg', ...m })
-    lastTs = m.timestamp
+    if (!isSystem) {
+      lastNonSystemTs = m.timestamp
+    }
   }
   return items
 })
 </script>
 
 <template>
+  <teleport to="body">
   <aside
     class="chat-sidebar"
     :class="{ open: isOpen }"
@@ -460,13 +492,13 @@ const timeline = computed<TimelineItem[]>(() => {
     </header>
 
     <div class="chat-body" ref="chatContainer">
-      <template v-for="item in timeline" :key="item.kind === 'msg' ? item.id : item.key">
-        <div v-if="item.kind === 'sep'" class="time-sep">
+      <template v-for="item in timeline">
+        <div v-if="item.kind === 'sep'" class="time-sep" :key="item.key">
           <span class="line"></span>
           <span class="label">{{ formattedTimeLabel(item.at) }}</span>
           <span class="line"></span>
         </div>
-        <div v-else class="msg" :class="item.userId === currentUserId ? 'mine' : 'theirs'">
+        <div v-else class="msg" :class="item.userId === currentUserId ? 'mine' : 'theirs'" :key="item.id">
           <div class="msg-header" v-if="item.userId !== currentUserId">
             <span class="msg-avatar">{{ item.avatar || '👤' }}</span>
             <span class="msg-name">{{ item.name || `用户${item.userId}` }}</span>
@@ -539,6 +571,7 @@ const timeline = computed<TimelineItem[]>(() => {
       </div>
     </div>
   </aside>
+  </teleport>
 </template>
 
 <style>
@@ -550,19 +583,25 @@ const timeline = computed<TimelineItem[]>(() => {
   height: 100vh;
   width: 16px; /* 折叠态宽度：仅显示拖拽把手 */
   transition: width 420ms cubic-bezier(.22,.61,.36,1), box-shadow 420ms cubic-bezier(.22,.61,.36,1);
-  z-index: 50;
+  z-index: 1000;
   display: flex;
   flex-direction: column;
   gap: 6px; /* 让语音选项与输入框更靠近 */
   padding: 10px 10px 12px 10px;
   overflow: hidden; /* 防止展开过渡时内部内容被压缩或提前露出 */
+  /* 局部排版标准化，避免受外层 Tailwind/全局样式影响导致字号变大等 */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
+  font-size: 13px;
+  line-height: 1.4;
 
   /* 素雅中性背景 + 轻毛玻璃 */
   background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.82) 100%);
   backdrop-filter: blur(10px) saturate(120%);
   -webkit-backdrop-filter: blur(10px) saturate(120%);
-  border-left: 1px solid rgba(15, 23, 42, 0.06);
-  box-shadow: -6px 0 16px rgba(15, 23, 42, 0.06);
+
+
+   border-left: 1px solid rgba(15, 23, 42, 0.06)!important;;
+  box-shadow: -6px 0 16px rgba(15, 23, 42, 0.06)!important;;
 }
 .chat-sidebar.open {
   width: 380px; /* 展开态宽度 */
@@ -646,7 +685,7 @@ const timeline = computed<TimelineItem[]>(() => {
 .msg-name {
   font-size: 11px; font-weight: 500; color: #6b7280; opacity: 0.9;
 }
-.text { margin: 0 0 6px 0; line-height: 1.35; font-size: 13.5px; }
+.text { margin: 0 0 6px 0; line-height: 1.35; font-size: 13.5px; font-weight: 330; }
 .time { font-size: 11px; color: #6b7280; opacity: .75; }
 .time-sep {
   width: 100%; display: flex; align-items: center; gap: 10px; color: #475569; opacity: .8;
@@ -666,7 +705,7 @@ const timeline = computed<TimelineItem[]>(() => {
   border-radius: 12px;
   background: rgba(255,255,255,0.9);
   border: 1px solid rgba(15,23,42,0.08);
-     margin-bottom: 40px; /* 增加底部距离，数值可根据需要调整 */
+     margin-bottom: 16px; /* 让输入区域更贴近底部 */
 }
 .input {
   height: 34px;
@@ -676,6 +715,7 @@ const timeline = computed<TimelineItem[]>(() => {
   padding: 0 10px;
   background: #ffffff;
   color: #1f2937;
+  font-size: 13px;
 }
 .input:focus { border-color: rgba(99,102,241,.35); box-shadow: 0 0 0 3px rgba(99,102,241,.12); }
 .send {
@@ -684,6 +724,7 @@ const timeline = computed<TimelineItem[]>(() => {
   background: #f6f7fb;
   color: #1f2937;
   font-weight: 600;
+  font-size: 13px; /* 发送按钮文字更小一点 */
   transition: background .15s ease, border-color .15s ease;
 }
 .send:hover:not(:disabled) { background: #eef2ff; border-color: rgba(99,102,241,.5); }

@@ -5,6 +5,7 @@ import { database } from "./src/config/database";
 import userRoutes from "./src/controller/userController";
 import articleRoutes from "./src/controller/articleController";
 import { CollabService } from "./src/service/CollabService";
+import { startWsServer } from "./src/ws-server";
 // import redis from "redis";
 // import nodemailer from "nodemailer";
 /* import { expressjwt } from "express-jwt";
@@ -12,6 +13,8 @@ import { webToken } from "./config"; */
 
 export const server = new CollabService(8990);
 server.start();
+// 启动 WebSocket 聊天服务（与同一进程内）
+startWsServer();
 
 const app: Express = express();
 

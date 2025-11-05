@@ -30,6 +30,8 @@ export const Canvas: FC<CanvasProps> = ({ file, onClose }) => {
           <Sidebar />
         </div>
       </div>
+      {/* 挂载自定义元素（Vue Web Component），组件自身会贴边并可折叠 */}
+      <chat-sidebar></chat-sidebar>
     </div>
   );
 };
