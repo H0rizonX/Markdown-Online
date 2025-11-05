@@ -20,31 +20,20 @@ export function startWsServer(port?: number) {
     const json = JSON.stringify(data)
     for (const client of wss.clients) {
       if ((client as WebSocket).readyState === 1 /* OPEN */ && client !== excludeSocket) {
-        try { (client as WebSocket).send(json) } catch {
-          // 忽略发送失败（客户端可能已断开）
+        try { 
+          (client as WebSocket).send(json) 
+        } catch {
+          // 忽略发送错误
         }
       }
     }
   }
 
-  type MessagePayload = {
-    type: string
-    id?: string
-    userId?: number
-    name?: string
-    avatar?: string
-    text?: string
-    timestamp?: number
-    to?: number
-    sdp?: unknown
-    candidate?: unknown
-  }
-
   wss.on('connection', (ws: WebSocket & { userId?: number }) => {
     ws.on('message', (raw: WebSocket.RawData) => {
-      let msg: MessagePayload | null = null
+      let msg: Record<string, unknown>
       try {
-        msg = JSON.parse(String(raw)) as MessagePayload
+        msg = JSON.parse(String(raw)) as Record<string, unknown>
       } catch {
         return
       }
@@ -59,8 +48,10 @@ export function startWsServer(port?: number) {
           text: msg.text,
           timestamp: msg.timestamp || Date.now(),
         }
-        try { ws.send(JSON.stringify(payload)) } catch {
-          // 忽略发送失败（客户端可能已断开）
+        try { 
+          ws.send(JSON.stringify(payload)) 
+        } catch {
+          // 忽略发送错误
         }
         broadcast(payload, ws)
       }
@@ -69,27 +60,34 @@ export function startWsServer(port?: number) {
         ws.userId = msg.userId
         wss.clientsByUserId.set(ws.userId, ws)
         const online = Array.from(wss.clientsByUserId.keys())
-        try { ws.send(JSON.stringify({ type: 'presence:list', users: online })) } catch {
-          // 忽略发送失败（客户端可能已断开）
+        try { 
+          ws.send(JSON.stringify({ type: 'presence:list', users: online })) 
+        } catch {
+          // 忽略发送错误
         }
         broadcast({ type: 'presence:join', userId: ws.userId }, ws)
       }
 
       if (msg && (msg.type === 'rtc:offer' || msg.type === 'rtc:answer' || msg.type === 'rtc:candidate')) {
         const to = msg.to
-        if (typeof to === 'number') {
+        if (to && typeof to === 'number') {
           const target = wss.clientsByUserId.get(to)
           if (target && target.readyState === 1) {
-            try { target.send(JSON.stringify(msg)) } catch {
-              // 忽略发送失败（客户端可能已断开）
+            try { 
+              // 直接发送原始消息对象，保留所有字段
+              target.send(JSON.stringify(msg)) 
+            } catch {
+              // 忽略发送错误
             }
           }
         }
       }
     })
 
-    try { ws.send(JSON.stringify({ type: 'ready', serverTime: Date.now() })) } catch {
-      // 忽略发送失败（客户端可能已断开）
+    try { 
+      ws.send(JSON.stringify({ type: 'ready', serverTime: Date.now() })) 
+    } catch {
+      // 忽略发送错误
     }
 
     ws.on('close', () => {

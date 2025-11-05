@@ -157,7 +157,12 @@ let reconnectTimer: number | null = null
 const cleanupAllPeers = () => {
   // 关闭所有 RTCPeerConnection
   for (const [, pc] of peerConnections.value) {
-    try { pc.onicecandidate = null; pc.ontrack = null; pc.onnegotiationneeded = null } catch {}
+    try {
+      pc.onicecandidate = null
+      pc.ontrack = null
+      pc.onnegotiationneeded = null
+      pc.onconnectionstatechange = null
+    } catch {}
     try { pc.close() } catch {}
   }
   peerConnections.value.clear()
@@ -188,7 +193,28 @@ const ensureLocalStream = async () => {
 
 const createPeer = async (peerId: number): Promise<RTCPeerConnection> => {
   let pc = peerConnections.value.get(peerId)
-  if (pc) return pc
+  // 检查现有连接是否仍然有效
+  if (pc) {
+    const state = pc.connectionState
+    if (state === 'connected' || state === 'connecting' || state === 'new') {
+      return pc
+    }
+    // 连接已关闭或失败，清理并重新创建
+    try {
+      pc.onicecandidate = null
+      pc.ontrack = null
+      pc.onnegotiationneeded = null
+      pc.onconnectionstatechange = null
+      pc.close()
+    } catch {}
+    peerConnections.value.delete(peerId)
+    const audio = remoteAudios.value.get(peerId)
+    if (audio) {
+      try { audio.srcObject = null } catch {}
+      remoteAudios.value.delete(peerId)
+    }
+  }
+  
   pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] })
 
   pc.onicecandidate = (ev) => {
@@ -209,6 +235,31 @@ const createPeer = async (peerId: number): Promise<RTCPeerConnection> => {
     audio.volume = speakerEnabled.value && !deafened.value ? 1 : 0
     // 主动尝试播放，规避部分浏览器的自动播放限制
     try { audio.play?.() } catch {}
+  }
+
+  // 监听连接状态变化，自动清理失效的连接
+  pc.onconnectionstatechange = () => {
+    const state = pc.connectionState
+    if (state === 'closed' || state === 'failed' || state === 'disconnected') {
+      // 延迟清理，避免在重连过程中过早清理
+      setTimeout(() => {
+        if (pc.connectionState === 'closed' || pc.connectionState === 'failed') {
+          try {
+            pc.onicecandidate = null
+            pc.ontrack = null
+            pc.onnegotiationneeded = null
+            pc.onconnectionstatechange = null
+            pc.close()
+          } catch {}
+          peerConnections.value.delete(peerId)
+          const audio = remoteAudios.value.get(peerId)
+          if (audio) {
+            try { audio.srcObject = null } catch {}
+            remoteAudios.value.delete(peerId)
+          }
+        }
+      }, 2000)
+    }
   }
 
   // 当我们添加/移除轨道后，触发重新协商；为避免 glare，仅由较小 ID 的一端发起
@@ -249,6 +300,11 @@ const connect = () => {
   if (connecting.value) return
   // 防止重复 WS 连接
   if (ws.value && (ws.value.readyState === WebSocket.CONNECTING || ws.value.readyState === WebSocket.OPEN)) return
+  
+  // WebSocket重连前，清理所有旧的Peer连接（避免信令混乱）
+  cleanupAllPeers()
+  onlineUserIds.value = new Set([currentUserId])
+  
   connecting.value = true
   // 优先使用 window.VITE_WS_URL（由 index.html 注入 .env 值），最后回退到同主机 3001
   const envWsUrl = (window && (window as any).VITE_WS_URL)
@@ -282,6 +338,24 @@ const connect = () => {
         for (const uid of data.users as number[]) {
           if (typeof uid === 'number') next.add(uid)
         }
+        // 清理不在列表中的用户连接
+        for (const [uid, pc] of peerConnections.value.entries()) {
+          if (!next.has(uid) && uid !== currentUserId) {
+            try {
+              pc.onicecandidate = null
+              pc.ontrack = null
+              pc.onnegotiationneeded = null
+              pc.onconnectionstatechange = null
+              pc.close()
+            } catch {}
+            peerConnections.value.delete(uid)
+            const audio = remoteAudios.value.get(uid)
+            if (audio) {
+              try { audio.srcObject = null } catch {}
+              remoteAudios.value.delete(uid)
+            }
+          }
+        }
         onlineUserIds.value = next
         for (const uid of next) {
           if (uid !== currentUserId) {
@@ -303,9 +377,21 @@ const connect = () => {
       // 离开
       if (data.type === 'presence:leave' && typeof data.userId === 'number') {
         const pc = peerConnections.value.get(data.userId)
-        if (pc) { try { pc.close() } catch {} ; peerConnections.value.delete(data.userId) }
+        if (pc) {
+          try {
+            pc.onicecandidate = null
+            pc.ontrack = null
+            pc.onnegotiationneeded = null
+            pc.onconnectionstatechange = null
+            pc.close()
+          } catch {}
+          peerConnections.value.delete(data.userId)
+        }
         const audio = remoteAudios.value.get(data.userId)
-        if (audio) { try { audio.srcObject = null } catch {} ; remoteAudios.value.delete(data.userId) }
+        if (audio) {
+          try { audio.srcObject = null } catch {}
+          remoteAudios.value.delete(data.userId)
+        }
         onlineUserIds.value.delete(data.userId)
       }
       // RTC 信令
