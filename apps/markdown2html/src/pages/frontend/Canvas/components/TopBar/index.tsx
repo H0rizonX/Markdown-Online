@@ -1,28 +1,13 @@
-import { type FC, useRef, useState, useEffect, useMemo } from "react";
+import { type FC, useRef, useState, useEffect } from "react";
 import type { componentProps } from "../../interface";
 import { BookOpenCheck, Timer, Users } from "lucide-react";
 import { Tooltip } from "antd";
-import * as Y from "yjs";
-import { WebsocketProvider } from "y-websocket";
 
 const TopBar: FC<componentProps> = ({ isExpended, file }) => {
   const MAX_LENGTH = 20;
   const [showTooltip, setShowTooltip] = useState(false);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const providerRef = useRef<WebsocketProvider | null>(null);
-
-  // 配置：默认连接 ws://<host>:3004，房间可来自文件路径/ID（默认 topbar-title）
-  const DEFAULT_SERVER = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:3004`;
-  const win = window as unknown as { VITE_YJS_WS_SERVER?: string; VITE_YJS_WS_ROOM?: string };
-  const SERVER = win.VITE_YJS_WS_SERVER || DEFAULT_SERVER;
-  const ROOM = win.VITE_YJS_WS_ROOM || (file?.path || "topbar-title");
-
-  const { ydoc, ytext } = useMemo(() => {
-    const doc = new Y.Doc();
-    const text = doc.getText("title");
-    return { ydoc: doc, ytext: text };
-  }, []);
 
   const handleBeforeInput = (e: React.FormEvent<HTMLHeadingElement>) => {
     const element = e.currentTarget;
@@ -83,61 +68,6 @@ const TopBar: FC<componentProps> = ({ isExpended, file }) => {
     timerRef.current = setTimeout(() => setShowTooltip(false), 2000);
   };
 
-  // 连接 y-websocket，并将 Y.Text<"title"> 与 h1 同步
-  useEffect(() => {
-    const globalKey = `__YWS__${SERVER}__${ROOM}`;
-    const cache = window as unknown as Record<string, unknown>;
-    let provider = cache[globalKey] as WebsocketProvider | undefined;
-    if (!provider) {
-      provider = new WebsocketProvider(SERVER, String(ROOM), ydoc);
-      cache[globalKey] = provider;
-    }
-    providerRef.current = provider;
-
-    // 初始化：若远端为空则用现有 file?.title；否则渲染远端内容
-    const ensureInitial = () => {
-      const current = ytext.toString();
-      const initial = (file?.title ?? "").slice(0, MAX_LENGTH);
-      if (!current && initial) {
-        ytext.insert(0, initial);
-      }
-      const t = ytext.toString();
-      if (headingRef.current && headingRef.current.innerText !== t) {
-        headingRef.current.innerText = t;
-      }
-    };
-
-    const observer = () => {
-      const t = ytext.toString();
-      if (headingRef.current && headingRef.current.innerText !== t) {
-        headingRef.current.innerText = t;
-      }
-    };
-
-    ensureInitial();
-    ytext.observe(observer);
-
-    return () => {
-      try { ytext.unobserve(observer); } catch { /* noop */ }
-    };
-  }, [SERVER, ROOM, ydoc, ytext, file?.title]);
-
-  // 本地输入 -> Y.Text（限制 MAX_LENGTH）
-  const handleInput = () => {
-    const el = headingRef.current;
-    if (!el) return;
-    let next = (el.innerText || "").trim();
-    if (next.length > MAX_LENGTH) {
-      next = next.slice(0, MAX_LENGTH);
-      el.innerText = next;
-      showLimitTooltip();
-    }
-    const cur = ytext.toString();
-    if (cur === next) return;
-    ytext.delete(0, cur.length);
-    if (next) ytext.insert(0, next);
-  };
-
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -172,9 +102,8 @@ const TopBar: FC<componentProps> = ({ isExpended, file }) => {
             onBeforeInput={handleBeforeInput}
             onPaste={handlePaste}
             onKeyDown={handleKeyDown}
-          onInput={handleInput}
           >
-            {""}
+            {file?.title}
           </h1>
         </Tooltip>
 
