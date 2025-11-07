@@ -1,15 +1,6 @@
-import { useState, useEffect, type FC } from "react";
+import { type FC } from "react";
 
 const LoadingPage: FC = () => {
-  const [dots, setDots] = useState("");
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDots((prev) => (prev.length < 3 ? prev + "." : ""));
-    }, 500);
-    return () => clearInterval(interval);
-  }, []);
-
   return (
     <div className="flex items-center justify-center h-screen bg-gray-50">
       <div className="flex flex-col items-center">
@@ -39,7 +30,12 @@ const LoadingPage: FC = () => {
           />
         </svg>
         <p className="text-gray-700 text-lg font-medium select-none">
-          加载中{dots}
+          <span>加载中</span>
+          <span className="loading-dots">
+            <span>.</span>
+            <span>.</span>
+            <span>.</span>
+          </span>
         </p>
 
         <style>{`
@@ -60,6 +56,33 @@ const LoadingPage: FC = () => {
             100% {
               stroke-dasharray: 90, 150;
               stroke-dashoffset: -124;
+            }
+          }
+          .loading-dots {
+            display: inline-block;
+          }
+          .loading-dots span {
+            animation: dot-blink 1.5s infinite;
+            opacity: 0;
+          }
+          .loading-dots span:nth-child(1) {
+            animation-delay: 0s;
+          }
+          .loading-dots span:nth-child(2) {
+            animation-delay: 0.5s;
+          }
+          .loading-dots span:nth-child(3) {
+            animation-delay: 1s;
+          }
+          @keyframes dot-blink {
+            0%, 20% {
+              opacity: 0;
+            }
+            50% {
+              opacity: 1;
+            }
+            100% {
+              opacity: 0;
             }
           }
         `}</style>

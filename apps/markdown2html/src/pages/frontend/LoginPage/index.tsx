@@ -11,7 +11,8 @@ import {
   type registerType,
   type resetType,
 } from "./service";
-import { getMessageApi } from "../../../utils";
+import { getMessageApi, setToken, setUser } from "../../../utils";
+import type { User } from "../../../utils/user";
 
 const LoginPage = () => {
   const [loading, setLoading] = useState(false);
@@ -76,6 +77,14 @@ const LoginPage = () => {
       if (isLogin) {
         const res = await Login(values as LoginType);
         if (res.status === 0) {
+          // 存储 token 和用户信息
+          const loginData = res.data as { token: string; user: User };
+          if (loginData.token) {
+            setToken(loginData.token);
+          }
+          if (loginData.user) {
+            setUser(loginData.user);
+          }
           navigator("/");
           msgBox.success(res.message);
         } else {
@@ -139,6 +148,7 @@ const LoginPage = () => {
                 <Input
                   prefix={<UserOutlined />}
                   placeholder="请输入用户 ID 或邮箱"
+                  autoComplete="username"
                 />
               </Form.Item>
 
@@ -150,6 +160,7 @@ const LoginPage = () => {
                 <Input.Password
                   prefix={<LockOutlined />}
                   placeholder="请输入密码"
+                  autoComplete="current-password"
                 />
               </Form.Item>
 
@@ -177,7 +188,11 @@ const LoginPage = () => {
                   { type: "email", message: "请输入有效的邮箱地址" },
                 ]}
               >
-                <Input prefix={<MailOutlined />} placeholder="请输入邮箱" />
+                <Input
+                  prefix={<MailOutlined />}
+                  placeholder="请输入邮箱"
+                  autoComplete="email"
+                />
               </Form.Item>
 
               <Form.Item
@@ -214,7 +229,10 @@ const LoginPage = () => {
                 ]}
                 hasFeedback
               >
-                <Input.Password placeholder="请输入密码" />
+                <Input.Password
+                  placeholder="请输入密码"
+                  autoComplete="new-password"
+                />
               </Form.Item>
 
               <Form.Item
@@ -234,7 +252,10 @@ const LoginPage = () => {
                   }),
                 ]}
               >
-                <Input.Password placeholder="请确认密码" />
+                <Input.Password
+                  placeholder="请确认密码"
+                  autoComplete="new-password"
+                />
               </Form.Item>
             </>
           )}
@@ -282,7 +303,7 @@ const LoginPage = () => {
         open={forgotVisible}
         onCancel={() => setForgotVisible(false)}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={resetForm} layout="vertical" onFinish={handleResetPassword}>
           <Form.Item
@@ -293,7 +314,11 @@ const LoginPage = () => {
               { type: "email", message: "请输入有效的邮箱地址" },
             ]}
           >
-            <Input prefix={<MailOutlined />} placeholder="请输入邮箱" />
+            <Input
+              prefix={<MailOutlined />}
+              placeholder="请输入邮箱"
+              autoComplete="email"
+            />
           </Form.Item>
 
           <Form.Item
@@ -332,7 +357,10 @@ const LoginPage = () => {
             ]}
             hasFeedback
           >
-            <Input.Password placeholder="请输入新密码" />
+            <Input.Password
+              placeholder="请输入新密码"
+              autoComplete="new-password"
+            />
           </Form.Item>
 
           <Form.Item
@@ -352,7 +380,10 @@ const LoginPage = () => {
               }),
             ]}
           >
-            <Input.Password placeholder="请确认新密码" />
+            <Input.Password
+              placeholder="请确认新密码"
+              autoComplete="new-password"
+            />
           </Form.Item>
 
           <Form.Item>
