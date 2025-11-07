@@ -23,10 +23,30 @@ const users: User[] = [
   { id: 2, name: 'Alex', email: 'alex@example.com', avatar: '🫧' },
 ]
 
-// 简单的本地用户信息（每个浏览器窗口会有不同的随机用户）
-const currentUserId = Math.floor(Math.random() * 100000)
-const currentUserName = `用户${currentUserId.toString().slice(-4)}`
-const currentUserAvatar = ['🟣', '🫧', '🦄', '🌟', '💫', '✨', '🔮', '🌠'][currentUserId % 8]
+// 从 localStorage 读取真实用户信息，如果没有则使用随机用户
+const getUserFromStorage = (): { id: number; name: string; avatar: string } | null => {
+  try {
+    const userStr = localStorage.getItem('user_info')
+    if (!userStr) return null
+    const user = JSON.parse(userStr)
+    if (user && user.id && user.name) {
+      return {
+        id: user.id,
+        name: user.name,
+        avatar: user.avatar || ['🟣', '🫧', '🦄', '🌟', '💫', '✨', '🔮', '🌠'][user.id % 8]
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to parse user info from localStorage', e)
+  }
+  return null
+}
+
+const storedUser = getUserFromStorage()
+const fallbackUserId = Math.floor(Math.random() * 100000)
+const currentUserId = storedUser?.id || fallbackUserId
+const currentUserName = storedUser?.name || `用户${fallbackUserId.toString().slice(-4)}`
+const currentUserAvatar = storedUser?.avatar || ['🟣', '🫧', '🦄', '🌟', '💫', '✨', '🔮', '🌠'][currentUserId % 8]
 
 const messages = ref<ChatMessage[]>([])
 
@@ -109,7 +129,15 @@ const memberCount = computed(() => onlineUserIds.value.size)
 // 成员面板：开关与数据
 const showMembers = ref(false)
 const toggleMembers = () => { showMembers.value = !showMembers.value }
-const pickAvatarById = (uid: number) => ['🟣', '🫧', '🦄', '🌟', '💫', '✨', '🔮', '🌠'][uid % 8]
+const pickAvatarById = (uid: number) => {
+  // 如果是当前用户，使用真实头像
+  if (uid === currentUserId) {
+    // 如果是 URL，返回 URL；否则返回 emoji
+    return currentUserAvatar.startsWith('http') ? currentUserAvatar : currentUserAvatar
+  }
+  // 其他用户使用默认 emoji
+  return ['🟣', '🫧', '🦄', '🌟', '💫', '✨', '🔮', '🌠'][uid % 8]
+}
 const displayNameById = (uid: number) => uid === currentUserId ? currentUserName : `用户${uid.toString().slice(-4)}`
 type OnlineUser = { id: number; name: string; avatar: string }
 // 表情：开关与数据
@@ -586,7 +614,10 @@ const timeline = computed<TimelineItem[]>(() => {
         </div>
         <div v-else class="msg" :class="item.userId === currentUserId ? 'mine' : 'theirs'" :key="item.id">
           <div class="msg-header" v-if="item.userId !== currentUserId">
-            <span class="msg-avatar">{{ item.avatar || '👤' }}</span>
+            <span class="msg-avatar">
+              <img v-if="item.avatar && item.avatar.startsWith('http')" :src="item.avatar" :alt="item.name || '用户'" class="avatar-img" />
+              <span v-else>{{ item.avatar || '👤' }}</span>
+            </span>
             <span class="msg-name">{{ item.name || `用户${item.userId}` }}</span>
           </div>
           <div class="bubble">
@@ -640,7 +671,10 @@ const timeline = computed<TimelineItem[]>(() => {
       </div>
       <div class="members-list">
         <div class="member-item" v-for="u in onlineUsers" :key="u.id">
-          <span class="m-avatar">{{ u.avatar }}</span>
+          <span class="m-avatar">
+            <img v-if="u.avatar && u.avatar.startsWith('http')" :src="u.avatar" :alt="u.name" class="avatar-img" />
+            <span v-else>{{ u.avatar }}</span>
+          </span>
           <span class="m-name">{{ u.name }}</span>
           <span class="m-tag" v-if="u.id === currentUserId">你</span>
         </div>
@@ -766,7 +800,10 @@ const timeline = computed<TimelineItem[]>(() => {
   padding: 0 4px;
 }
 .msg-avatar {
-  font-size: 16px; display: inline-block;
+  font-size: 16px; display: inline-block; width: 20px; height: 20px; border-radius: 999px; overflow: hidden; flex-shrink: 0;
+}
+.msg-avatar .avatar-img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
 }
 .msg-name {
   font-size: 11px; font-weight: 500; color: #6b7280; opacity: 0.9;
@@ -876,7 +913,8 @@ const timeline = computed<TimelineItem[]>(() => {
 .members-list { overflow: auto; display: flex; flex-direction: column; gap: 6px; }
 .member-item { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 8px; padding: 6px; border-radius: 8px; border: 1px solid rgba(15,23,42,0.06); background: #fff; }
 .member-item:hover { background: #f8fafc; }
-.m-avatar { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 999px; background: #f5f6f8; border: 1px solid rgba(15,23,42,.08); }
+.m-avatar { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 999px; background: #f5f6f8; border: 1px solid rgba(15,23,42,.08); overflow: hidden; }
+.m-avatar .avatar-img { width: 100%; height: 100%; object-fit: cover; }
 .m-name { font-size: 13px; color: #111827; }
 .m-tag { font-size: 11px; color: #6b7280; border: 1px solid rgba(15,23,42,0.12); border-radius: 999px; padding: 2px 6px; }
 
