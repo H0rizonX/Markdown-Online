@@ -2,63 +2,37 @@ import { type FC, useRef, useState, useEffect } from "react";
 import type { componentProps } from "../../interface";
 import { BookOpenCheck, Timer, Users } from "lucide-react";
 import { Tooltip } from "antd";
+import * as Y from "yjs";
 
-const TopBar: FC<componentProps> = ({ isExpended, file }) => {
+const TopBar: FC<componentProps> = ({ isExpended, file, ydoc, awareness }) => {
   const MAX_LENGTH = 20;
   const [showTooltip, setShowTooltip] = useState(false);
-  const headingRef = useRef<HTMLHeadingElement | null>(null);
+  const [title, setTitle] = useState(file?.title || "");
+  const [onlineUsersCount, setOnlineUsersCount] = useState(0);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const ytextRef = useRef<Y.Text | null>(null);
+  const isUpdatingFromYjs = useRef(false); // 防止循环更新
 
-  const handleBeforeInput = (e: React.FormEvent<HTMLHeadingElement>) => {
-    const element = e.currentTarget;
-    const selection = window.getSelection();
-    const selectedTextLength = selection?.toString().length ?? 0;
-    const incomingLength = (e as unknown as InputEvent).data?.length ?? 0;
-    const newLength =
-      element.innerText.length - selectedTextLength + incomingLength;
-
-    if (newLength > MAX_LENGTH) {
-      e.preventDefault();
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    
+    if (newValue.length > MAX_LENGTH) {
+      e.target.value = title; // 恢复原值
       showLimitTooltip();
-    }
-  };
-
-  const handlePaste = (e: React.ClipboardEvent<HTMLHeadingElement>) => {
-    const pasteData = e.clipboardData.getData("text");
-    const currentText = headingRef.current?.innerText || "";
-    const selection = window.getSelection();
-    const selectedLength = selection?.toString().length ?? 0;
-    const finalLength = currentText.length - selectedLength + pasteData.length;
-
-    if (finalLength > MAX_LENGTH) {
-      e.preventDefault();
-      showLimitTooltip();
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLHeadingElement>) => {
-    const element = headingRef.current;
-    const selection = window.getSelection();
-    const selectedLength = selection?.toString().length ?? 0;
-    const currentLength = element?.innerText.length ?? 0;
-
-    // 允许删除、方向键、复制粘贴等控制键
-    if (
-      [
-        "Backspace",
-        "Delete",
-        "ArrowLeft",
-        "ArrowRight",
-        "ArrowUp",
-        "ArrowDown",
-      ].includes(e.key)
-    ) {
       return;
     }
 
-    if (currentLength - selectedLength >= MAX_LENGTH) {
-      e.preventDefault();
-      showLimitTooltip();
+    setTitle(newValue);
+    
+    // 同步到 Yjs（如果不是来自 Yjs 的更新）
+    if (!isUpdatingFromYjs.current && ytextRef.current) {
+      const currentYjsText = ytextRef.current.toString();
+      if (currentYjsText !== newValue) {
+        // 计算差异并更新 Yjs
+        ytextRef.current.delete(0, currentYjsText.length);
+        ytextRef.current.insert(0, newValue);
+      }
     }
   };
 
@@ -67,6 +41,89 @@ const TopBar: FC<componentProps> = ({ isExpended, file }) => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => setShowTooltip(false), 2000);
   };
+
+  // 初始化 Yjs 标题同步
+  useEffect(() => {
+    if (!ydoc) return;
+
+    const ytext = ydoc.getText("title");
+    ytextRef.current = ytext;
+
+    // 从 Yjs 读取初始标题
+    const currentTitle = ytext.toString();
+    if (currentTitle) {
+      // Yjs 中已有标题，使用它
+      setTitle(currentTitle);
+      if (inputRef.current) {
+        inputRef.current.value = currentTitle;
+      }
+    } else if (file?.title) {
+      // 如果 Yjs 中没有标题，且当前标题为空，才初始化
+      const inputValue = inputRef.current?.value || "";
+      if (!inputValue && file.title) {
+        ytext.insert(0, file.title);
+        setTitle(file.title);
+        if (inputRef.current) {
+          inputRef.current.value = file.title;
+        }
+      }
+    }
+
+    // 监听 Yjs 标题变化
+    const updateTitle = () => {
+      const newTitle = ytext.toString();
+      if (inputRef.current && inputRef.current.value !== newTitle) {
+        // 保存当前光标位置
+        const cursorPos = inputRef.current.selectionStart || 0;
+        const oldValue = inputRef.current.value;
+        
+        isUpdatingFromYjs.current = true;
+        setTitle(newTitle);
+        inputRef.current.value = newTitle;
+        
+        // 恢复光标位置（如果内容长度变化，调整位置）
+        setTimeout(() => {
+          if (inputRef.current) {
+            const newLen = inputRef.current.value.length;
+            const oldLen = oldValue.length;
+            // 如果内容变短了，光标位置不能超过新长度
+            const newCursorPos = Math.min(cursorPos, newLen);
+            // 如果内容变长了，保持相对位置
+            const adjustedPos = oldLen > 0 ? Math.min(newCursorPos, newLen) : newLen;
+            inputRef.current.setSelectionRange(adjustedPos, adjustedPos);
+          }
+          isUpdatingFromYjs.current = false;
+        }, 0);
+      }
+    };
+
+    ytext.observe(updateTitle);
+
+    return () => {
+      ytext.unobserve(updateTitle);
+    };
+  }, [ydoc, file?.title]);
+
+  // 监听在线用户数量
+  useEffect(() => {
+    if (!awareness) return;
+
+    const updateOnlineUsers = () => {
+      const states = awareness.getStates();
+      setOnlineUsersCount(states.size);
+    };
+
+    awareness.on('change', updateOnlineUsers);
+    updateOnlineUsers(); // 初始更新
+
+    return () => {
+      try {
+        awareness.off('change', updateOnlineUsers);
+      } catch {
+        // noop
+      }
+    };
+  }, [awareness]);
 
   useEffect(() => {
     return () => {
@@ -88,23 +145,19 @@ const TopBar: FC<componentProps> = ({ isExpended, file }) => {
           title={showTooltip ? "最多输入 20 个字符" : ""}
           placement="top"
         >
-          <h1
-            ref={headingRef}
-            contentEditable
-            suppressContentEditableWarning={true}
-            spellCheck={true}
-            aria-placeholder="请输入标题"
+          <input
+            ref={inputRef}
+            type="text"
+            value={title}
+            onChange={handleInput}
+            maxLength={MAX_LENGTH}
+            placeholder="请输入标题"
             className="text-3xl font-bold text-gray-900
-              px-1 rounded
-              focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50
-              selection:bg-gray-300 selection:text-white
-              cursor-text"
-            onBeforeInput={handleBeforeInput}
-            onPaste={handlePaste}
-            onKeyDown={handleKeyDown}
-          >
-            {file?.title}
-          </h1>
+              px-1 rounded border-none outline-none
+              focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50
+              bg-transparent w-full"
+            spellCheck={true}
+          />
         </Tooltip>
 
         <div className="text-sm text-gray-500 flex gap-6">
@@ -122,7 +175,7 @@ const TopBar: FC<componentProps> = ({ isExpended, file }) => {
 
       <div className="flex items-center justify-center gap-1 text-gray-400 text-sm">
         <BookOpenCheck className="w-4 h-4" />
-        <span>2</span>
+        <span>{onlineUsersCount || 1}</span>
       </div>
     </div>
   );
