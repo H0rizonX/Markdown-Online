@@ -1,18 +1,22 @@
 type FileItem = {
   title: string;
-  author:string,
+  author: string;
   type: "doc" | "sheet";
   path: string;
   time: string;
   tag?: string | null;
 };
 
-interface FileGridProps {
+type FileGridProps = {
   files: FileItem[];
   currentPage: number;
   total: number;
   pageSize: number;
   onPageChange: (page: number) => void;
-}
+};
 
-export type {FileItem,FileGridProps}
+type articleType = {
+  authorId?: number;
+};
+
+export type { FileItem, FileGridProps, articleType };
