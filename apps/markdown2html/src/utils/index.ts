@@ -14,3 +14,4 @@ export {
   removeUser,
   isLoggedIn,
 };
+export { request, getMessageApi, setMessageApi };

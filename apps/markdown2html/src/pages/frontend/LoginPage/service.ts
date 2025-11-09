@@ -1,16 +1,6 @@
 import type { resType } from "../../../types/common";
 import { request } from "../../../utils";
-
-export type LoginType = {
-  identify: number | string;
-  password: string;
-  status: number;
-};
-
-export type registerType = {
-  email: string;
-  password?: string;
-};
+import type { LoginType, registerType } from "./interface";
 
 export type resetType = registerType & {
   code: string; // 验证码

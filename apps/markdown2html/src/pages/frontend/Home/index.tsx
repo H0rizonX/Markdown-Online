@@ -4,6 +4,8 @@ import { SearchOutlined } from "@ant-design/icons";
 import HomeMenu from "./components/menu";
 import HeaderBar from "./components/header";
 import FileGrid from "./components/file-grid";
+// import { useUserStore } from "../../../store/user";
+// import { getAllArticles } from "./service";
 
 const allFiles = [...Array(100)].map((_, i) => ({
   title: `文档 ${i + 1}`,
@@ -22,6 +24,8 @@ const HomePage: FC = () => {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
+  // const userInfo = useUserStore((state) => state.userInfo);
+
   const filteredFiles = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
     return !keyword
@@ -34,6 +38,15 @@ const HomePage: FC = () => {
     return filteredFiles.slice(start, start + pageSize);
   }, [filteredFiles, currentPage]);
 
+  /*  useEffect(() => {
+    if (userInfo) {
+      const authorId = userInfo?.id;
+
+      const list = getAllArticles({ authorId });
+
+      console.log(list, "文章列表");
+    }
+  }, [userInfo]);*/
   return (
     <div className="h-screen bg-white  flex flex-col overflow-auto">
       <HeaderBar />

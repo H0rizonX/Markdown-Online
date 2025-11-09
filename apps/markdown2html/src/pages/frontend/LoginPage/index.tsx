@@ -7,12 +7,15 @@ import {
   Register,
   sendEmail,
   resetPassword,
-  type LoginType,
-  type registerType,
   type resetType,
 } from "./service";
 import { getMessageApi, setToken, setUser } from "../../../utils";
 import type { User } from "../../../utils/user";
+import { getMessageApi } from "../../../utils";
+import type { dataType } from "../../../types/common";
+import { useTokenStore } from "../../../store/token";
+import { useUserStore } from "../../../store/user";
+import type { LoginType, registerType } from "./interface";
 
 const LoginPage = () => {
   const [loading, setLoading] = useState(false);
@@ -20,7 +23,6 @@ const LoginPage = () => {
   const [form] = Form.useForm();
   const [resetForm] = Form.useForm();
   const navigator = useNavigate();
-
   // 倒计时状态
   const [countdown, setCountdown] = useState(0);
   const [resetCountdown, setResetCountdown] = useState(0);
@@ -91,14 +93,9 @@ const LoginPage = () => {
           msgBox.warning(res.message);
         }
       } else {
-        const res = await Register(values as registerType);
-        if (res.status === 0) {
-          msgBox.success(res.message);
-          setIsLogin(true);
-          form.resetFields();
-        } else {
-          msgBox.warning(res.message);
-        }
+        await Register(values as registerType);
+        setIsLogin(true);
+        form.resetFields();
       }
     } catch (error) {
       msgBox.error(isLogin ? "登录失败" : "注册失败");
@@ -116,11 +113,6 @@ const LoginPage = () => {
       password,
     };
     const res = await resetPassword(resetValue);
-    console.log(res, "重置密码的结果");
-    if (res.status === 1) {
-      msgBox.info(res.message);
-      return;
-    }
 
     msgBox.success(res.message);
     setForgotVisible(false);
