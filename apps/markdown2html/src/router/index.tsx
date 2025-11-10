@@ -6,6 +6,7 @@ import NotFoundPage from "../pages/shared/404";
 const HomePage = lazy(() => import("../pages/frontend/Home"));
 const Login = lazy(() => import("../pages/frontend/LoginPage"));
 const CollabDemo = lazy(() => import("../pages/frontend/CollabDemo"));
+const ProfileCenter = lazy(() => import("../pages/frontend/Profile/index"));
 
 const router = createBrowserRouter([
   {
@@ -29,6 +30,14 @@ const router = createBrowserRouter([
     element: (
       <Suspense fallback={<LoadingPage />}>
         <Login />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/ProfileCenter",
+    element: (
+      <Suspense fallback={<LoadingPage />}>
+        <ProfileCenter />
       </Suspense>
     ),
   },

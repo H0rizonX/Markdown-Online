@@ -8,6 +8,8 @@ import { CollabService } from "./src/service/CollabService";
 import { startWsServer } from "./src/ws-server";
 
 import { startYjsWsServer } from "./src/yjs-ws-server";
+import { expressjwt } from "express-jwt";
+import { webToken } from "./config";
 // import redis from "redis";
 // import nodemailer from "nodemailer";
 /* import { expressjwt } from "express-jwt";
@@ -19,7 +21,6 @@ server.start();
 startWsServer();
 // 启动 Yjs WebSocket 协同编辑服务（默认端口改为 3004，避免与前端端口冲突）
 startYjsWsServer(3004);
-
 
 const app: Express = express();
 
@@ -33,14 +34,15 @@ app.use(result);
 app.use(express.json());
 
 // jwt验证
-/* app.use(
+app.use(
   expressjwt({ secret: webToken.jwtSecretKey, algorithms: ["HS256"] }).unless({
     path: [
       { url: /^\/users\/?$/, methods: ["GET", "POST", "PUT", "DELETE"] },
       { url: /^\/users\/register\/?$/, methods: ["POST"] },
+      { url: /^\/users\/info\/?$/, methods: ["GET"] },
     ],
   })
-); */
+);
 
 database
   .initialize()

@@ -1,9 +1,10 @@
 import { useState, useMemo, type FC } from "react";
-import { Button, Input } from "antd";
+import { Button, Input, Modal } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import HomeMenu from "./components/menu";
 import HeaderBar from "./components/header";
 import FileGrid from "./components/file-grid";
+import NewDocumentPage from "./components/create/Index";
 // import { useUserStore } from "../../../store/user";
 // import { getAllArticles } from "./service";
 
@@ -38,6 +39,7 @@ const HomePage: FC = () => {
     return filteredFiles.slice(start, start + pageSize);
   }, [filteredFiles, currentPage]);
 
+  const [isModalVisible, setIsModalVisible] = useState(false);
   /*  useEffect(() => {
     if (userInfo) {
       const authorId = userInfo?.id;
@@ -67,7 +69,11 @@ const HomePage: FC = () => {
                 setCurrentPage(1);
               }}
             />
-            <Button className="ml-4" type="primary">
+            <Button
+              className="ml-4"
+              type="primary"
+              onClick={() => setIsModalVisible(true)}
+            >
               + 新建
             </Button>
           </div>
@@ -83,6 +89,15 @@ const HomePage: FC = () => {
           </div>
         </main>
       </div>
+      // HomePage.tsx
+      <Modal
+        title="新建文档"
+        open={isModalVisible}
+        onCancel={() => setIsModalVisible(false)}
+        footer={null}
+      >
+        <NewDocumentPage onSuccess={() => setIsModalVisible(false)} />
+      </Modal>
     </div>
   );
 };

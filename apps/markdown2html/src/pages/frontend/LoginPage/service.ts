@@ -23,3 +23,11 @@ export const Register = async (params: registerType): Promise<resType> => {
 export const resetPassword = async (params: registerType): Promise<resType> => {
   return await request.post("/users/reset-password", params);
 };
+
+export const getUserInfo = async (token: string): Promise<resType> => {
+  return await request.get("/users/info", {
+    headers: {
+      Authorization: `Bearer ${token}`, // 👈 注意这里一定要加 "Bearer "
+    },
+  });
+};

@@ -8,6 +8,7 @@ import {
   sendEmail,
   resetPassword,
   type resetType,
+  getUserInfo,
 } from "./service";
 import { getMessageApi } from "../../../utils";
 import type { dataType } from "../../../types/common";
@@ -84,9 +85,9 @@ const LoginPage = () => {
           const loginData = res.data as dataType;
           if (loginData.token) {
             setToken(loginData.token);
-          }
-          if (loginData.user) {
-            login(loginData.user);
+            const result = await getUserInfo(loginData.token);
+            const userInfo = result.data as dataType;
+            login(userInfo.user!);
           }
           navigator("/");
           msgBox.success(res.message);
@@ -96,6 +97,7 @@ const LoginPage = () => {
       } else {
         await Register(values as registerType);
         setIsLogin(true);
+        msgBox.success("注册成功");
         form.resetFields();
       }
     } catch (error) {

@@ -11,22 +11,41 @@ import {
 import type { FC } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import type { UserType } from "../../../../../types/common";
+import type { dataType, UserType } from "../../../../../types/common";
 import useUserStore from "../../../../../stores/user";
 import { useTokenStore } from "../../../../../stores/token";
+import { getUserInfo } from "../../../LoginPage/service";
 
 const HeaderBar: FC = () => {
   const { Link } = Typography;
   const navigator = useNavigate();
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
 
-  const { userInfo, logout } = useUserStore();
-  const { clearToken } = useTokenStore();
+  const { logout, login } = useUserStore();
+  const { token, clearToken } = useTokenStore();
   useEffect(() => {
-    // 获取当前用户信息
-    const user = userInfo;
-    setCurrentUser(user);
-  }, [userInfo]);
+    const fetchUser = async () => {
+      if (!token) {
+        navigator("/login");
+        return;
+      }
+      try {
+        const res = await getUserInfo(token);
+        const result: dataType = res.data as dataType;
+        if (result && result.user) {
+          setCurrentUser(result.user);
+          login(result.user);
+        } else {
+          navigator("/login");
+        }
+      } catch (err) {
+        console.error("获取用户信息失败:", err);
+        navigator("/login");
+      }
+    };
+
+    fetchUser();
+  }, [token]);
 
   const handleLogout = () => {
     // 清除 token 和用户信息
@@ -42,7 +61,15 @@ const HeaderBar: FC = () => {
       key: "0",
     },
     {
-      label: <Link>个人中心</Link>,
+      label: (
+        <Link
+          onClick={() => {
+            navigator("/ProfileCenter");
+          }}
+        >
+          个人中心
+        </Link>
+      ),
       key: "1",
     },
     {
