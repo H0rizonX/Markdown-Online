@@ -8,7 +8,8 @@ class ChatSidebarElement extends HTMLElement {
   }
   connectedCallback() {
     if (!this.__app) {
-      this.__app = createApp(ChatSidebar)
+      const room = this.getAttribute('room') || ''
+      this.__app = createApp(ChatSidebar, { room })
       this.__app.mount(this)
     }
   }
