@@ -9,12 +9,10 @@ import {
   resetPassword,
   type resetType,
 } from "./service";
-import { getMessageApi, setToken, setUser } from "../../../utils";
-import type { User } from "../../../utils/user";
 import { getMessageApi } from "../../../utils";
 import type { dataType } from "../../../types/common";
-import { useTokenStore } from "../../../store/token";
-import { useUserStore } from "../../../store/user";
+import { useTokenStore } from "../../../stores/token";
+import { useUserStore } from "../../../stores/user";
 import type { LoginType, registerType } from "./interface";
 
 const LoginPage = () => {
@@ -30,6 +28,9 @@ const LoginPage = () => {
   // 忘记密码弹窗状态
   const [forgotVisible, setForgotVisible] = useState(false);
 
+  // 存储库
+  const { setToken } = useTokenStore();
+  const { login } = useUserStore();
   // 弹窗
   const msgBox = getMessageApi();
   type AuthValues = Partial<LoginType & registerType>;
@@ -80,12 +81,12 @@ const LoginPage = () => {
         const res = await Login(values as LoginType);
         if (res.status === 0) {
           // 存储 token 和用户信息
-          const loginData = res.data as { token: string; user: User };
+          const loginData = res.data as dataType;
           if (loginData.token) {
             setToken(loginData.token);
           }
           if (loginData.user) {
-            setUser(loginData.user);
+            login(loginData.user);
           }
           navigator("/");
           msgBox.success(res.message);

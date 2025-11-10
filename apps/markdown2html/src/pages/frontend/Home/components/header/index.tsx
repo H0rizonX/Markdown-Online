@@ -10,25 +10,28 @@ import {
 } from "antd";
 import type { FC } from "react";
 import { useNavigate } from "react-router-dom";
-import { removeToken, removeUser, getUser } from "../../../../../utils";
 import { useEffect, useState } from "react";
-import type { User } from "../../../../../utils/user";
+import type { UserType } from "../../../../../types/common";
+import useUserStore from "../../../../../stores/user";
+import { useTokenStore } from "../../../../../stores/token";
 
 const HeaderBar: FC = () => {
   const { Link } = Typography;
   const navigator = useNavigate();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserType | null>(null);
 
+  const { userInfo, logout } = useUserStore();
+  const { clearToken } = useTokenStore();
   useEffect(() => {
     // 获取当前用户信息
-    const user = getUser();
+    const user = userInfo;
     setCurrentUser(user);
-  }, []);
+  }, [userInfo]);
 
   const handleLogout = () => {
     // 清除 token 和用户信息
-    removeToken();
-    removeUser();
+    clearToken();
+    logout();
     // 跳转到登录页
     navigator("/login");
   };

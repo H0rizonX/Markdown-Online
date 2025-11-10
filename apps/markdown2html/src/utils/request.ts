@@ -6,7 +6,7 @@ import type {
   AxiosError,
 } from "axios";
 import { getMessageApi } from "./globalMessage";
-import { useTokenStore } from "../store/token";
+import { useTokenStore } from "../stores/token";
 
 // 全局message提示
 const msgBox = getMessageApi();
