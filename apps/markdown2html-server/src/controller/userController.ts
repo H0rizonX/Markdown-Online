@@ -30,11 +30,37 @@ router.post("/", async (req: Request, res: Response) => {
   if (!isPasswordValid) {
     return res.fail("用户名或密码错误");
   }
-  delete user.password;
-  const tokenStr = jwt.sign({ data }, webToken.jwtSecretKey, {
+  const tokenStr = jwt.sign({ userId: user.id }, webToken.jwtSecretKey, {
     expiresIn: webToken.expiresIn,
   });
-  return res.suc({ token: tokenStr, user: user }, 200, "登录成功");
+  return res.suc({ token: tokenStr }, 200, "登录成功");
+});
+
+router.get("/info", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      return res.fail("token");
+    }
+    const token = authHeader.split(" ")[1];
+
+    // 验证并解码 token
+    const decoded = jwt.verify(token, webToken.jwtSecretKey) as {
+      userId: number;
+    };
+
+    // 根据 userId 查询用户
+    const user = await userService.getUser(decoded.userId);
+    if (!user) return res.fail("用户不存在");
+
+    delete user.password;
+
+    return res.suc({ user }, 200, "获取用户信息成功");
+  } catch (err) {
+    console.error("解析 token 失败:", err);
+    return res.fail("token 无效或已过期");
+  }
 });
 
 // 使用 Joi 校验请求体

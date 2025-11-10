@@ -4,6 +4,10 @@ export type UserType = {
   email: string;
   avatar: string;
 };
+
+export type ArticleType = {
+  title: string;
+};
 export type dataType = {
   token?: string;
   user?: UserType;
