@@ -10,11 +10,10 @@ router.get("/create", async (req: Request, res: Response) => {
   console.log("用户创建房间");
   return res.suc(data);
 });
-
 router.post("/save", async (req: Request, res: Response) => {
-  const { title, content, authorId } = req.body;
-
-  if (!title || !content || !authorId) {
+  const { doc, team } = req.body;
+  const { title, content, authorId, visibility } = doc;
+  if (!title || !content || !authorId || !visibility) {
     return res.fail("请确保所有字段不为空");
   }
 
@@ -26,31 +25,38 @@ router.post("/save", async (req: Request, res: Response) => {
       content,
       authorId,
       id,
+      visibility,
+      structure: null,
+      teamId: team?.id ?? null,
     };
     const data = await articleService.save(article);
-    // console.log("日志信息");
     return res.suc(data);
   } catch (error) {
     return res.fail(error);
   }
 });
 
-router.put("/update", async (req: Request, res: Response) => {
-  // const data = await service.method(req.body);
-  // console.log("日志信息");
-  return res.suc("成功");
+router.put("/update/:id", async (req: Request, res: Response) => {
+  try {
+    const articleId = +req.params.id;
+    const data = await articleService.update(articleId, req.body);
+    return res.suc(data);
+  } catch (error) {
+    console.log(error);
+    return res.fail(error);
+  }
 });
 
 router.delete("/delete/:id", async (req: Request, res: Response) => {
   const articleId = req.params.id;
 
   const data = await articleService.delete(Number(articleId));
-  // console.log("日志信息");
+
   if (data.affected === 0) return res.suc("文章不存在");
   return res.suc("删除成功");
 });
 
-router.get("/all", async (req: Request, res: Response) => {
+router.get("/myDocs", async (req: Request, res: Response) => {
   const { authorId } = req.body;
   if (!authorId) return res.suc("暂无文章");
   const data = await articleService.findAll(authorId);

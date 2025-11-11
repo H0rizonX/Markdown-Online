@@ -4,6 +4,7 @@ import { result } from "./src/utils";
 import { database } from "./src/config/database";
 import userRoutes from "./src/controller/userController";
 import articleRoutes from "./src/controller/articleController";
+import teamRoutes from "./src/controller/teamController";
 import { CollabService } from "./src/service/CollabService";
 import { startWsServer } from "./src/ws-server";
 
@@ -51,7 +52,7 @@ database
 
     app.use("/users", userRoutes);
     app.use("/article", articleRoutes);
-
+    app.use("/team", teamRoutes);
     app.listen(3003, () =>
       console.log("Server started at http://localhost:3003")
     );

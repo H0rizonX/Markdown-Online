@@ -8,6 +8,7 @@ import {
   JoinColumn,
 } from "typeorm";
 import { Users } from "./user";
+import { Team } from "./team";
 
 @Entity({ name: "articles" })
 export class Article {
@@ -23,9 +24,26 @@ export class Article {
   @Column()
   authorId: number; // 外键关联用户 ID
 
-  @ManyToOne(() => Users, (user) => user.articles)
+  @ManyToOne(() => Users, (user) => user.articles, { onDelete: "CASCADE" })
   @JoinColumn({ name: "authorId" })
-  author: Users; // 通过关系映射可以查到用户信息
+  author: Users;
+
+  // 团队外键，可为空（个人文章无团队）
+  @ManyToOne(() => Team, (team) => team.articles, {
+    nullable: true,
+    onDelete: "SET NULL",
+  })
+  @JoinColumn({ name: "teamId" })
+  team: Team | null;
+
+  @Column({ nullable: true })
+  teamId: number | null;
+
+  @Column({ type: "enum", enum: ["team", "personal"], default: "personal" })
+  visibility: "team" | "personal";
+
+  @Column({ type: "json", nullable: true })
+  structure: Record<string, unknown> | null;
 
   @CreateDateColumn({ type: "timestamp" })
   createdAt: Date;

@@ -21,7 +21,7 @@ router.get("/all", async (req: Request, res: Response) => {
 
 router.post("/", async (req: Request, res: Response) => {
   const data = { ...req.body };
-
+  console.log("请求登录");
   const user = await userService.getUser(data.identify);
   if (!user) {
     return res.fail("用户名或密码错误");

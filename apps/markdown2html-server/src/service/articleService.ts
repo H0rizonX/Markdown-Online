@@ -11,6 +11,9 @@ export interface articleType {
   content: string;
   createdAt?: Date;
   updatedAt?: Date;
+  visibility?: "team" | "personal";
+  structure?: Record<string, unknown> | null;
+  teamId?: number;
 }
 
 export class ArticleService {
