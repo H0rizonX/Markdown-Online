@@ -22,6 +22,12 @@ export class Team {
   @Column({ type: "varchar", length: 100, nullable: false })
   name: string;
 
+  @Column({ type: "text", nullable: true })
+  description: string;
+
+  // 团队标签数组
+  @Column({ type: "simple-array", nullable: true })
+  tags: string[];
   // 团队拥有者，一个用户可以创建多个团队
   @ManyToOne(() => Users, (user) => user.ownedTeams, { onDelete: "CASCADE" })
   @JoinColumn({ name: "ownerId" })

@@ -11,10 +11,6 @@ import { startWsServer } from "./src/ws-server";
 import { startYjsWsServer } from "./src/yjs-ws-server";
 import { expressjwt } from "express-jwt";
 import { webToken } from "./config";
-// import redis from "redis";
-// import nodemailer from "nodemailer";
-/* import { expressjwt } from "express-jwt";
-import { webToken } from "./config"; */
 
 export const server = new CollabService(8990);
 server.start();
@@ -41,6 +37,7 @@ app.use(
       { url: /^\/users\/?$/, methods: ["GET", "POST", "PUT", "DELETE"] },
       { url: /^\/users\/register\/?$/, methods: ["POST"] },
       { url: /^\/users\/info\/?$/, methods: ["GET"] },
+      { url: /^\/users\/send-email\/?$/, methods: ["POST"] },
     ],
   })
 );

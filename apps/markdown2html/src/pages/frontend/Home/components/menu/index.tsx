@@ -1,9 +1,15 @@
 import { type FC } from "react";
 import type { MenuProps } from "antd";
 import { Menu } from "antd";
-import { Blinds, Share2, Star, User, Users } from "lucide-react";
+import { Blinds, Share2, User, Users } from "lucide-react";
 
 type MenuItem = Required<MenuProps>["items"][number];
+
+interface HomeMenuProps {
+  currentKey: string;
+
+  onSelect: (key: string) => void;
+}
 
 const items: MenuItem[] = [
   {
@@ -17,11 +23,6 @@ const items: MenuItem[] = [
     icon: <Share2 />,
   },
   {
-    key: "liked",
-    label: "收藏",
-    icon: <Star />,
-  },
-  {
     type: "divider",
   },
   {
@@ -29,25 +30,23 @@ const items: MenuItem[] = [
     label: "我的文档",
     icon: <User />,
   },
-
   {
     key: "team",
-    label: "团队文档",
+    label: "团队",
     icon: <Users />,
   },
 ];
 
-const HomeMenu: FC = () => {
+const HomeMenu: FC<HomeMenuProps> = ({ currentKey, onSelect }) => {
   const onClick: MenuProps["onClick"] = (e) => {
-    console.log("click ", e);
+    onSelect(e.key);
   };
 
   return (
     <Menu
       onClick={onClick}
       className="w-full h-full border-none"
-      defaultSelectedKeys={["mainPage"]}
-      defaultOpenKeys={["mainPage"]}
+      selectedKeys={[currentKey]}
       mode="inline"
       items={items}
     />

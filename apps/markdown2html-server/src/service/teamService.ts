@@ -9,6 +9,8 @@ export interface teamType {
   ownerId: number;
   owner?: Users;
   members?: Users[];
+  tags?: string[];
+  description?: string;
 }
 
 export class TeamService {
@@ -33,10 +35,17 @@ export class TeamService {
   async findAll(userId: number) {
     return this.repo
       .createQueryBuilder("team")
-      .leftJoinAndSelect("team.members", "member") // 关联 team_user
+      .leftJoinAndSelect("team.members", "member", "")
       .where("team.ownerId = :userId", { userId })
-      .orWhere("member.id = :userId", { userId })
-      .orderBy("team.createdAt", "DESC")
+      .orWhere((qb) => {
+        const subQuery = qb
+          .subQuery()
+          .select("team_user.teamId")
+          .from("team_user", "team_user")
+          .where("team_user.userId = :userId", { userId })
+          .getQuery();
+        return "team.id IN " + subQuery;
+      })
       .getMany();
   }
 
@@ -108,5 +117,20 @@ export class TeamService {
       .getMany();
 
     return users; // 返回团队成员完整信息
+  }
+
+  async updateTeam(
+    teamId: number,
+    data: { name: string; description?: string; tags?: string[] }
+  ) {
+    const team = await this.repo.findOneBy({ id: teamId });
+    if (!team) throw new Error("团队不存在");
+
+    // 更新字段
+    team.name = data.name;
+    if (data.description !== undefined) team.description = data.description;
+    if (data.tags !== undefined) team.tags = data.tags;
+
+    return await this.repo.save(team);
   }
 }

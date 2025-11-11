@@ -17,6 +17,8 @@ type FileGridProps = {
 
 type articleType = {
   authorId?: number;
+  title?: string;
+  author?: string;
 };
 
 export type { FileItem, FileGridProps, articleType };
