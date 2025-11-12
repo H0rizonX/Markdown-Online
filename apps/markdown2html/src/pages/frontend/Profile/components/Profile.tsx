@@ -3,37 +3,56 @@ import { Form, Input, Button } from "antd";
 import { UserOutlined, MailOutlined, LockOutlined } from "@ant-design/icons";
 import type { UserType } from "../../../../types/common";
 import ProfileAvatar from "./avatar";
+import { updateUserInfo, uploadAvatar } from "../service";
 
 interface ProfileProps {
   user: UserType; // 从父组件传入
   onSubmit?: (updatedUser: UserType) => void; // 可选回调
 }
 
-const Profile: FC<ProfileProps> = ({ user }) => {
+const Profile: FC<ProfileProps> = ({ user, onSubmit }) => {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
 
-  // 每次 user 改变时更新表单值
   useEffect(() => {
     form.setFieldsValue(user);
-    console.log(user, "user");
   }, [user, form]);
 
-  const handleFinish = (values: UserType) => {
+  const handleFinish = async (values: UserType) => {
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      console.log(values);
-    }, 500);
+    await updateUserInfo(values);
+    setLoading(false);
+    if (onSubmit) {
+      onSubmit(values);
+    }
   };
 
+  const handleUpload = async (file: File) => {
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+
+      // 直接用时间戳作为文件名
+      const timestamp = Date.now();
+      const newFileName = `${timestamp}.${ext}`;
+
+      const newFile = new File([file], newFileName, { type: file.type });
+
+      const res = await uploadAvatar(newFile);
+      const userUpdated = res.data as UserType;
+      if (onSubmit) {
+        onSubmit(userUpdated);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col items-center pt-6 pb-10">
       <ProfileAvatar
         avatar={user.avatar}
         name={user.name}
         onChangeAvatar={(file) => {
-          console.log("选择的头像文件:", file);
+          handleUpload(file);
         }}
       />
 
@@ -63,10 +82,6 @@ const Profile: FC<ProfileProps> = ({ user }) => {
             ]}
           >
             <Input prefix={<MailOutlined />} placeholder="邮箱" size="large" />
-          </Form.Item>
-
-          <Form.Item label="手机号" name="phone">
-            <Input placeholder="手机号" size="large" />
           </Form.Item>
 
           <Form.Item label="密码" name="password">

@@ -12,11 +12,14 @@ import type { ArticleType } from "../../../../../types/common";
 import useUserStore from "../../../../../stores/user";
 import type { TeamType } from "../createTeam/service";
 import { getAllteam } from "../teamlists/service";
+import { createArticle } from "./service";
+import { getMessageApi } from "../../../../../utils";
+import type { FileItem } from "../../interface";
 
 const { Option } = Select;
 
 interface NewDocumentPageProps {
-  onSuccess?: () => void;
+  onSuccess?: (doc: FileItem) => void;
 }
 
 const defaultTagsOptions = ["项目A", "项目B", "重要文档", "测试"];
@@ -27,6 +30,7 @@ const NewDocumentPage: React.FC<NewDocumentPageProps> = ({ onSuccess }) => {
   const [teams, setTeams] = useState<{ id: number; name: string }[]>([]);
   const [visibility, setVisibility] = useState<string>("private");
   const { userInfo } = useUserStore();
+  const msgBox = getMessageApi();
 
   // 当选择“团队可见”时加载自己创建的团队
   const fetchTeams = async (userId: number) => {
@@ -48,11 +52,25 @@ const NewDocumentPage: React.FC<NewDocumentPageProps> = ({ onSuccess }) => {
     }
   };
 
-  const onFinish = (values: ArticleType) => {
-    console.log("新建文档信息:", values);
-    message.success(`文档 "${values.title}" 创建成功！`);
+  const onFinish = async (values: ArticleType) => {
+    const { title, visibility, tags, teamId } = values;
+    console.log(values, "value");
+    const doc = {
+      title,
+      authorId: userInfo?.id ?? 0,
+      visibility,
+      tags,
+      content: "",
+      teamId,
+    };
+    const team: TeamType = {
+      id: teamId,
+    };
+    const res = await createArticle({ doc, team });
+    console.log(res, "create");
+    msgBox.success("文档创建成功");
     form.resetFields();
-    onSuccess?.();
+    onSuccess?.(res.data as FileItem);
   };
 
   // 切换可见性
@@ -68,13 +86,13 @@ const NewDocumentPage: React.FC<NewDocumentPageProps> = ({ onSuccess }) => {
     <Form form={form} layout="vertical" onFinish={onFinish}>
       <Form.Item
         label="文档名"
-        name="name"
+        name="title"
         rules={[{ required: true, message: "请输入文档名" }]}
       >
         <Input placeholder="请输入文档名" />
       </Form.Item>
 
-      <Form.Item
+      {/*   <Form.Item
         label="文档类型"
         name="type"
         rules={[{ required: true, message: "请选择文档类型" }]}
@@ -82,7 +100,7 @@ const NewDocumentPage: React.FC<NewDocumentPageProps> = ({ onSuccess }) => {
         <Radio.Group defaultValue="document">
           <Radio value="document">文档</Radio>
         </Radio.Group>
-      </Form.Item>
+      </Form.Item> */}
 
       <Form.Item
         label="可见性"
@@ -91,7 +109,7 @@ const NewDocumentPage: React.FC<NewDocumentPageProps> = ({ onSuccess }) => {
       >
         <Radio.Group onChange={handleVisibilityChange} value={visibility}>
           <Radio value="team">团队可见</Radio>
-          <Radio value="private">仅自己可见</Radio>
+          <Radio value="personal">仅自己可见</Radio>
         </Radio.Group>
       </Form.Item>
 

@@ -1,43 +1,17 @@
 import { type FC } from "react";
 import type { MenuProps } from "antd";
 import { Menu } from "antd";
-import { Blinds, Share2, User, Users } from "lucide-react";
-
-type MenuItem = Required<MenuProps>["items"][number];
+import type { TabItem } from "../..";
 
 interface HomeMenuProps {
   currentKey: string;
 
   onSelect: (key: string) => void;
+
+  tabs: TabItem[];
 }
 
-const items: MenuItem[] = [
-  {
-    key: "mainPage",
-    label: "首页",
-    icon: <Blinds />,
-  },
-  {
-    key: "sharing",
-    label: "共享",
-    icon: <Share2 />,
-  },
-  {
-    type: "divider",
-  },
-  {
-    key: "mine",
-    label: "我的文档",
-    icon: <User />,
-  },
-  {
-    key: "team",
-    label: "团队",
-    icon: <Users />,
-  },
-];
-
-const HomeMenu: FC<HomeMenuProps> = ({ currentKey, onSelect }) => {
+const HomeMenu: FC<HomeMenuProps> = ({ currentKey, onSelect, tabs }) => {
   const onClick: MenuProps["onClick"] = (e) => {
     onSelect(e.key);
   };
@@ -48,7 +22,7 @@ const HomeMenu: FC<HomeMenuProps> = ({ currentKey, onSelect }) => {
       className="w-full h-full border-none"
       selectedKeys={[currentKey]}
       mode="inline"
-      items={items}
+      items={tabs}
     />
   );
 };

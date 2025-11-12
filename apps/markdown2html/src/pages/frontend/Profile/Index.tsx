@@ -6,12 +6,15 @@ import Sidebar from "./components/Sidebar";
 import useUserStore from "../../../stores/user";
 import type { UserType } from "../../../types/common";
 import Profile from "./components/Profile";
+import { getMessageApi } from "../../../utils";
 
 const ProfileCenter: React.FC = () => {
   const [user, setUser] = useState<UserType | null>(null);
 
-  const { userInfo } = useUserStore();
+  const { userInfo, updateUser } = useUserStore();
   const navigator = useNavigate();
+
+  const msgBox = getMessageApi();
   useEffect(() => {
     setUser(userInfo);
   }, [userInfo]);
@@ -27,7 +30,15 @@ const ProfileCenter: React.FC = () => {
       </Button>
       <div className="w-[80%] h-auto mx-auto flex justify-center space-x-6">
         <Sidebar />
-        {user && <Profile user={user} />}
+        {user && (
+          <Profile
+            user={user}
+            onSubmit={(userUpdated) => {
+              updateUser(userUpdated);
+              msgBox.success("个人信息更新成功");
+            }}
+          />
+        )}
       </div>
     </div>
   );

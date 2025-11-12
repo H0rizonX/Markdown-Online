@@ -1,5 +1,5 @@
-import { useState, type FC } from "react";
-import { Modal } from "antd";
+import { useEffect, useState, type FC } from "react";
+import { Modal, type MenuProps } from "antd";
 import HomeMenu from "./components/menu";
 import HeaderBar from "./components/header";
 import NewDocumentPage from "./components/createDoc/Index";
@@ -7,19 +7,28 @@ import DocumentListPanel from "./components/documentLists";
 import TeamLists from "./components/teamlists";
 import TeamForm from "./components/createTeam";
 import JoinTeamModal from "./components/joinTeam";
-
-interface TabItem {
+import { getDocuments } from "./service";
+import useUserStore from "../../../stores/user";
+import type { FileItem } from "./interface";
+import { Blinds, Share2, User, Users } from "lucide-react";
+import MenuItem from "antd/es/menu/MenuItem";
+type MenuItem = Required<MenuProps>["items"][number];
+export type TabItem = {
   key: string;
-  title: string;
+  label?: string;
   icon?: React.ReactNode;
-}
+  value?: string;
+} & MenuItem;
 
 const tabItems: TabItem[] = [
-  { key: "mainPage", title: "首页" },
-  { key: "sharing", title: "共享" },
-  { key: "liked", title: "收藏" },
-  { key: "mine", title: "我的文档" },
-  { key: "team", title: "团队文档" },
+  { key: "mainPage", label: "首页", value: "all", icon: <Blinds /> },
+  { key: "sharing", label: "共享", value: "shared", icon: <Share2 /> },
+  { key: "mine", label: "我的文档", value: "my", icon: <User /> },
+  {
+    type: "divider" as const,
+    key: "divider-1",
+  },
+  { key: "team", label: "团队", value: "team", icon: <Users /> },
 ];
 
 const HomePage: FC = () => {
@@ -28,11 +37,39 @@ const HomePage: FC = () => {
 
   const closeModal = () => setIsModalVisible(false);
   const [teamRefreshKey, setTeamRefreshKey] = useState(0);
-
+  const [documentLists, setDocumentLists] = useState<FileItem[]>([]);
+  const { userInfo } = useUserStore();
   const handleTeamCreated = () => {
     closeModal();
     setTeamRefreshKey((prev) => prev + 1); // 触发 TeamLists 刷新
   };
+
+  const handleDocCreated = (doc: FileItem) => {
+    setDocumentLists((prev) => {
+      return [doc, ...prev];
+    });
+  };
+
+  useEffect(() => {
+    const fetchGetDocs = async () => {
+      try {
+        const currentUserId = userInfo?.id;
+        const currentType = currentTab.value;
+
+        const result = await getDocuments({
+          authorId: currentUserId!,
+          type: currentType!,
+        });
+
+        setDocumentLists(result.data as FileItem[]);
+      } catch (error) {
+        console.error("获取文档列表异常:", error);
+        setDocumentLists([]);
+      }
+    };
+
+    fetchGetDocs();
+  }, [currentTab, userInfo?.id]); // 当tabItems变化时重新获取
   return (
     <div className="h-screen bg-white flex flex-col overflow-auto">
       <HeaderBar />
@@ -44,6 +81,7 @@ const HomePage: FC = () => {
               const tab = tabItems.find((t) => t.key === key);
               if (tab) setCurrentTab(tab);
             }}
+            tabs={tabItems}
           />
         </aside>
 
@@ -56,14 +94,14 @@ const HomePage: FC = () => {
             />
           ) : (
             <DocumentListPanel
-              files={[]}
+              files={documentLists}
               onCreate={() => setIsModalVisible(true)}
             />
           )}
         </main>
       </div>
       <Modal
-        title={`新建 ${currentTab.title}`}
+        title={`新建 ${currentTab.label}`}
         open={isModalVisible}
         onCancel={closeModal}
         footer={null}
@@ -76,7 +114,12 @@ const HomePage: FC = () => {
             }}
           />
         ) : (
-          <NewDocumentPage onSuccess={closeModal} />
+          <NewDocumentPage
+            onSuccess={(doc) => {
+              closeModal();
+              handleDocCreated(doc); //更新doc
+            }}
+          />
         )}
       </Modal>
       <JoinTeamModal />

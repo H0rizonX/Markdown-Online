@@ -1,10 +1,13 @@
-type FileItem = {
-  title: string;
-  author: string;
+import type { ArticleType, UserType } from "../../../types/common";
+import type { TeamType } from "./components/createTeam/service";
+
+type FileItem = ArticleType & {
+  author: UserType;
   type: "doc" | "sheet";
   path: string;
   time: string;
-  tag?: string | null;
+  tags?: string[];
+  team?: TeamType;
 };
 
 type FileGridProps = {
@@ -15,10 +18,4 @@ type FileGridProps = {
   onPageChange: (page: number) => void;
 };
 
-type articleType = {
-  authorId?: number;
-  title?: string;
-  author?: string;
-};
-
-export type { FileItem, FileGridProps, articleType };
+export type { FileItem, FileGridProps };

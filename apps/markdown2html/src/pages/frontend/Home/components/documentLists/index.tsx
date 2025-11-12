@@ -12,20 +12,20 @@ interface DocumentListPanelProps {
 
 const DocumentListPanel: React.FC<DocumentListPanelProps> = ({
   files,
-  pageSize = 20,
+  pageSize = 16,
   onCreate,
 }) => {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  // 搜索过滤
   const filteredFiles = useMemo(() => {
-    return files.filter((file) =>
-      file.title?.toLowerCase().includes(searchKeyword.toLowerCase())
-    );
+    if (!files) return []; // 处理 files 为 null 的情况
+    if (!searchKeyword) return files; // 空搜索返回所有文件
+
+    const keyword = searchKeyword.toLowerCase();
+    return files.filter((file) => file.title?.toLowerCase().includes(keyword));
   }, [files, searchKeyword]);
 
-  // 分页
   const paginatedFiles = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return filteredFiles.slice(start, start + pageSize);
@@ -33,7 +33,6 @@ const DocumentListPanel: React.FC<DocumentListPanelProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      {/* 搜索 + 新建 */}
       <div className="flex justify-between items-center mb-4 shrink-0">
         <Input
           placeholder="搜索文档标题"
