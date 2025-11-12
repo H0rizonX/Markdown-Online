@@ -62,112 +62,107 @@ const FileGrid: FC<FileGridProps> = ({
   };
 
   return (
-    <div className="relative h-full flex flex-col">
-      <div className="flex-1 overflow-y-auto mb-4">
-        <div
-          className="grid grid-cols-4 gap-4 h-auto min-h-0"
-          style={{ minHeight: "640px" }}
-        >
-          {files.length > 0 ? (
-            files
-              .filter((file) => file != null)
-              .map((file, index) => (
-                <motion.div
-                  layoutId={`file-${index}`}
-                  key={index}
-                  onClick={() => setSelectedFile(file)}
-                  className="p-3 border rounded hover:shadow-md hover:border-blue-400 transition cursor-pointer 
+    <div className="relative h-full">
+      <div className="grid grid-cols-4 gap-6 mb-6 flex-1 overflow-hidden">
+        {files.length > 0 ? (
+          files
+            .filter((file) => file != null)
+            .map((file, index) => (
+              <motion.div
+                layoutId={`file-${index}`}
+                key={index}
+                onClick={() => setSelectedFile(file)}
+                className="p-3 border rounded hover:shadow-md hover:border-blue-400 transition cursor-pointer 
                           h-36 flex flex-col relative group"
-                >
-                  <div className="absolute bottom-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Popconfirm
-                      title="确定要删除这个文档吗？"
-                      description="删除后将无法恢复"
-                      onConfirm={(e) => handleDelete(file, e)}
-                      onCancel={handleCancel}
-                      okText="确定"
-                      cancelText="取消"
-                      okType="danger"
-                    >
-                      <Trash2
-                        className="w-4 h-4 text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
-                        onClick={handleTrashClick}
-                      />
-                    </Popconfirm>
-                  </div>
+              >
+                <div className="absolute bottom-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Popconfirm
+                    title="确定要删除这个文档吗？"
+                    description="删除后将无法恢复"
+                    onConfirm={(e) => handleDelete(file, e)}
+                    onCancel={handleCancel}
+                    okText="确定"
+                    cancelText="取消"
+                    okType="danger"
+                  >
+                    <Trash2
+                      className="w-4 h-4 text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
+                      onClick={handleTrashClick}
+                    />
+                  </Popconfirm>
+                </div>
 
-                  <div className="flex items-center gap-2 mb-2 flex-shrink-0">
-                    {file.type === "sheet" ? (
-                      <Sheet className="text-green-500 w-4 h-4 flex-shrink-0" />
-                    ) : (
-                      <FileText className="text-blue-500 w-4 h-4 flex-shrink-0" />
-                    )}
-                    <div className="text-sm font-medium line-clamp-2 flex-1 min-w-0">
-                      {file.title}
-                    </div>
-
-                    <div className="text-[11px] flex-shrink-0">
-                      <span
-                        className={`inline-flex items-center px-1.5 py-0.5 rounded-full font-medium ${
-                          file.team
-                            ? "bg-blue-100 text-blue-700 border border-blue-200"
-                            : "bg-gray-100 text-gray-700 border border-gray-200"
-                        }`}
-                      >
-                        {file.team ? "🏢团队" : "👤个人"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {file.tags && file.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-2 flex-shrink-0">
-                      {file.tags.map((tag) => (
-                        <Tag
-                          key={tag}
-                          color={getRandomColor()}
-                          className="text-xs px-1.5 py-0.5"
-                        >
-                          {tag}
-                        </Tag>
-                      ))}
-                    </div>
+                <div className="flex items-center gap-2 mb-2 flex-shrink-0">
+                  {file.type === "sheet" ? (
+                    <Sheet className="text-green-500 w-4 h-4 flex-shrink-0" />
+                  ) : (
+                    <FileText className="text-blue-500 w-4 h-4 flex-shrink-0" />
                   )}
-
-                  <div className="flex flex-col gap-1 flex-1 min-h-0">
-                    <div className="flex flex-col gap-1 flex-shrink-0">
-                      <div className="text-gray-500 text-[11px]">
-                        {file.author?.name}
-                      </div>
-                      {file.team && (
-                        <div className="text-[11px] text-gray-500 line-clamp-1">
-                          {file.team.name}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="text-[11px] text-gray-400 mt-auto flex-shrink-0">
-                      {new Date(file.updatedAt!).toLocaleString("zh-CN", {
-                        month: "2-digit",
-                        day: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </div>
+                  <div className="text-sm font-medium line-clamp-2 flex-1 min-w-0">
+                    {file.title}
                   </div>
-                </motion.div>
-              ))
-          ) : (
-            <div
-              className="text-center text-gray-500 col-span-4 py-8 flex items-center justify-center"
-              style={{ height: "640px" }}
-            >
-              没有匹配的文档
-            </div>
-          )}
-        </div>
+
+                  <div className="text-[11px] flex-shrink-0">
+                    <span
+                      className={`inline-flex items-center px-1.5 py-0.5 rounded-full font-medium ${
+                        file.team
+                          ? "bg-blue-100 text-blue-700 border border-blue-200"
+                          : "bg-gray-100 text-gray-700 border border-gray-200"
+                      }`}
+                    >
+                      {file.team ? "🏢团队" : "👤个人"}
+                    </span>
+                  </div>
+                </div>
+
+                {file.tags && file.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-2 flex-shrink-0">
+                    {file.tags.map((tag) => (
+                      <Tag
+                        key={tag}
+                        color={getRandomColor()}
+                        className="text-xs px-1.5 py-0.5"
+                      >
+                        {tag}
+                      </Tag>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-1 flex-1 min-h-0">
+                  <div className="flex flex-col gap-1 flex-shrink-0">
+                    <div className="text-gray-500 text-[11px]">
+                      {file.author?.name}
+                    </div>
+                    {file.team && (
+                      <div className="text-[11px] text-gray-500 line-clamp-1">
+                        {file.team.name}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="text-[11px] text-gray-400 mt-auto flex-shrink-0">
+                    {new Date(file.updatedAt!).toLocaleString("zh-CN", {
+                      month: "2-digit",
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                </div>
+              </motion.div>
+            ))
+        ) : (
+          <div
+            className="text-center text-gray-500 col-span-4 py-8 flex items-center justify-center"
+            style={{ height: "640px" }}
+          >
+            没有匹配的文档
+          </div>
+        )}
       </div>
 
-      <div className="flex justify-center pt-4 border-t">
+      <div className="absolute bottom-0 left-0 w-full flex justify-center pb-4">
         <Pagination
           current={currentPage}
           pageSize={pageSize}

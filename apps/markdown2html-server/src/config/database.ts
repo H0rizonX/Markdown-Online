@@ -3,6 +3,7 @@ import { DataSource } from "typeorm";
 import { Users } from "../entity/user";
 import { Article } from "../entity/article";
 import { Team } from "../entity/team";
+import { TeamArticle } from "../entity/teamArticles";
 
 export const database = new DataSource({
   type: "mysql",
@@ -13,5 +14,5 @@ export const database = new DataSource({
   database: "markdown",
   synchronize: true,
   logging: false,
-  entities: [Users, Article, Team],
+  entities: [Users, Article, Team, TeamArticle],
 });

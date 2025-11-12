@@ -45,6 +45,7 @@ const HomePage: FC = () => {
   };
 
   const handleDocCreated = (doc: FileItem) => {
+    console.log(doc, "修改的doc对象");
     setDocumentLists((prev) => {
       return [doc, ...prev];
     });

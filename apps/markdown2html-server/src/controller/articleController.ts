@@ -79,6 +79,8 @@ router.get("/getDocs", async (req: Request, res: Response) => {
         break;
 
       case "my":
+        // 我的个人文档-非共享
+        data = await articleService.findMyPrivateDocuments(+authorId);
         break;
 
       default:
