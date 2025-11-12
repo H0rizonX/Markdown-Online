@@ -10,9 +10,26 @@ import { webToken } from "../../config";
 import { transporterQQ } from "../utils";
 import { getMailOptions } from "../config/emailTemplate";
 import redis from "../config/redis";
-
+import fs from "fs";
+import ossClient from "../config/ali-oss";
+import multer from "multer";
 const router = express.Router();
 const userService = new UserService();
+
+const upload = multer({ dest: "uploads/" });
+
+const getUserInfo = async (token) => {
+  // 验证并解码 token
+  const decoded = jwt.verify(token, webToken.jwtSecretKey) as {
+    userId: number;
+  };
+
+  // 根据 userId 查询用户
+  const user = await userService.getUser(decoded.userId);
+
+  delete user.password;
+  return user;
+};
 
 router.get("/all", async (req: Request, res: Response) => {
   const users = await userService.findAll();
@@ -45,17 +62,7 @@ router.get("/info", async (req: Request, res: Response) => {
     }
     const token = authHeader.split(" ")[1];
 
-    // 验证并解码 token
-    const decoded = jwt.verify(token, webToken.jwtSecretKey) as {
-      userId: number;
-    };
-
-    // 根据 userId 查询用户
-    const user = await userService.getUser(decoded.userId);
-    if (!user) return res.fail("用户不存在");
-
-    delete user.password;
-
+    const user = await getUserInfo(token);
     return res.suc({ user }, 200, "获取用户信息成功");
   } catch (err) {
     console.error("解析 token 失败:", err);
@@ -168,5 +175,58 @@ router.post("/reset-password", async (req: Request, res: Response) => {
   if (result.affected >= 1) return res.suc("密码修改成功");
   return res.fail("服务器错误，请稍后重试修改密码", 500, 1);
 });
+
+// 阿里云上传oss
+router.post(
+  "/upload",
+  upload.single("file"),
+  async (req: Request, res: Response) => {
+    try {
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({ message: "未检测到上传文件" });
+      }
+
+      const authHeader = req.headers.authorization;
+
+      if (!authHeader) {
+        return res.fail("token");
+      }
+      const token = authHeader.split(" ")[1];
+
+      const user = await getUserInfo(token);
+      if (user.avatar) {
+        try {
+          const oldFileKey = user.avatar.split("/").slice(3).join("/");
+
+          await ossClient.delete(oldFileKey);
+        } catch (deleteErr) {
+          console.warn("删除旧头像失败：", deleteErr);
+        }
+      }
+
+      //生成唯一文件名
+      const ossFileName = `uploads/${Date.now()}_${file.originalname}`;
+
+      // 上传到 OSS
+      const result = await ossClient.put(ossFileName, file.path);
+
+      // 删除临时文件
+      fs.unlinkSync(file.path);
+
+      // 更新数据库
+      user.avatar = result.url;
+
+      await userService.update(user.id, user);
+
+      // 返回 OSS 文件地址
+      return res.suc(user);
+    } catch (err) {
+      console.error("上传出错：", err);
+      return res.status(500).json({ message: "上传失败", error: err.message });
+    }
+  }
+);
 
 export default router;

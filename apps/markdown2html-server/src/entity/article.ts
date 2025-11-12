@@ -50,4 +50,7 @@ export class Article {
 
   @UpdateDateColumn({ type: "timestamp" })
   updatedAt: Date;
+
+  @Column({ type: "simple-array", nullable: true })
+  tags: string[];
 }
