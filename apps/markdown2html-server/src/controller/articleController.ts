@@ -69,7 +69,7 @@ router.get("/getDocs", async (req: Request, res: Response) => {
 
     switch (type) {
       case "all":
-        // 我的文档 - 我创建的文档
+        // 所有文档 - 所有文档
         data = await articleService.findAllDocuments(+authorId);
         break;
 

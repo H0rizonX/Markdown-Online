@@ -46,11 +46,38 @@ export class ArticleService {
   }
 
   async findAllDocuments(authorId: number) {
-    return await this.repo.find({
-      where: { authorId },
-      relations: ["author", "team"],
-      order: { createdAt: "DESC" },
-    });
+    // ① 查找用户所在团队
+    const teams = await this.repo.manager
+      .getRepository("team_user")
+      .createQueryBuilder("tu")
+      .where("tu.userId = :authorId", { authorId })
+      .select("tu.teamId", "teamId")
+      .getRawMany();
+
+    const teamIds = teams.map((t) => t.teamId);
+
+    // ② 构造查询：作者自己创建的文档 + 团队文章
+    const qb = this.repo
+      .createQueryBuilder("article")
+      .leftJoinAndSelect("article.author", "author")
+      .leftJoinAndSelect("article.team", "team")
+      .leftJoin("team_articles", "ta", "ta.articleId = article.id");
+
+    // ③ 条件：作者本人 OR 属于其团队
+    if (teamIds.length > 0) {
+      qb.where("article.authorId = :authorId", { authorId }).orWhere(
+        "ta.teamId IN (:...teamIds)",
+        { teamIds }
+      );
+    } else {
+      qb.where("article.authorId = :authorId", { authorId });
+    }
+
+    // ④ 排序
+    qb.orderBy("article.createdAt", "DESC");
+
+    // ⑤ 执行查询
+    return await qb.getMany();
   }
 
   async findMySharedDocuments(authorId: number) {
