@@ -10,8 +10,8 @@ import {
 } from "antd";
 import type { FC } from "react";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import type { dataType, UserType } from "../../../../../types/common";
+import { useEffect } from "react";
+import type { dataType } from "../../../../../types/common";
 import useUserStore from "../../../../../stores/user";
 import { useTokenStore } from "../../../../../stores/token";
 import { getUserInfo } from "../../../LoginPage/service";
@@ -19,7 +19,8 @@ import { getUserInfo } from "../../../LoginPage/service";
 const HeaderBar: FC = () => {
   const { Link } = Typography;
   const navigator = useNavigate();
-  const [currentUser, setCurrentUser] = useState<UserType | null>(null);
+
+  const { userInfo } = useUserStore();
 
   const { logout, login } = useUserStore();
   const { token, clearToken } = useTokenStore();
@@ -33,7 +34,6 @@ const HeaderBar: FC = () => {
         const res = await getUserInfo(token);
         const result: dataType = res.data as dataType;
         if (result && result.user) {
-          setCurrentUser(result.user);
           login(result.user);
         } else {
           navigator("/login");
@@ -91,14 +91,14 @@ const HeaderBar: FC = () => {
       <div className="flex gap-4 items-center">
         <Button type="link">设置</Button>
         <Space size={24}>
-          {currentUser && (
-            <span className="text-sm text-gray-600">{currentUser.name}</span>
+          {userInfo && (
+            <span className="text-sm text-gray-600">{userInfo.name}</span>
           )}
           <Dropdown menu={{ items }}>
             <Badge dot>
               <Avatar
-                src={currentUser?.avatar}
-                icon={!currentUser?.avatar && <UserOutlined />}
+                src={userInfo?.avatar}
+                icon={!userInfo?.avatar && <UserOutlined />}
                 style={{ cursor: "pointer" }}
               />
             </Badge>

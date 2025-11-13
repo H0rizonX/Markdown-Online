@@ -10,11 +10,10 @@ router.get("/create", async (req: Request, res: Response) => {
   console.log("用户创建房间");
   return res.suc(data);
 });
-
 router.post("/save", async (req: Request, res: Response) => {
-  const { title, content, authorId } = req.body;
-
-  if (!title || !content || !authorId) {
+  const { doc, team } = req.body;
+  const { title, content, authorId, visibility, tags } = doc;
+  if (!title || !authorId || !visibility) {
     return res.fail("请确保所有字段不为空");
   }
 
@@ -26,43 +25,79 @@ router.post("/save", async (req: Request, res: Response) => {
       content,
       authorId,
       id,
+      visibility,
+      structure: null,
+      teamId: team?.id ?? null,
+      tags,
     };
     const data = await articleService.save(article);
-    // console.log("日志信息");
     return res.suc(data);
   } catch (error) {
     return res.fail(error);
   }
 });
 
-router.put("/update", async (req: Request, res: Response) => {
-  // const data = await service.method(req.body);
-  // console.log("日志信息");
-  return res.suc("成功");
+router.put("/update/:id", async (req: Request, res: Response) => {
+  try {
+    const articleId = +req.params.id;
+    const data = await articleService.update(articleId, req.body);
+    return res.suc(data);
+  } catch (error) {
+    console.log(error);
+    return res.fail(error);
+  }
 });
 
 router.delete("/delete/:id", async (req: Request, res: Response) => {
   const articleId = req.params.id;
 
   const data = await articleService.delete(Number(articleId));
-  // console.log("日志信息");
+
   if (data.affected === 0) return res.suc("文章不存在");
   return res.suc("删除成功");
 });
 
-router.get("/all", async (req: Request, res: Response) => {
-  const { authorId } = req.body;
-  if (!authorId) return res.suc("暂无文章");
-  const data = await articleService.findAll(authorId);
-  // console.log("日志信息");
-  return res.suc(data);
+router.get("/getDocs", async (req: Request, res: Response) => {
+  try {
+    const { authorId, type = "all" } = req.query; // type: 'my'  | 'all' | 'shared'
+
+    if (!authorId) {
+      return res.fail("authorId 参数必填");
+    }
+
+    let data;
+
+    switch (type) {
+      case "all":
+        // 所有文档 - 所有文档
+        data = await articleService.findAllDocuments(+authorId);
+        break;
+
+      case "shared":
+        // 我的共享文档 - 我创建的团队文档
+        data = await articleService.findMySharedDocuments(+authorId);
+        break;
+
+      case "my":
+        // 我的个人文档-非共享
+        data = await articleService.findMyPrivateDocuments(+authorId);
+        break;
+
+      default:
+        return res.fail("type 参数错误，可选值: my, team, shared, all");
+    }
+
+    return res.suc(data);
+  } catch (error) {
+    console.error("查询文档失败:", error);
+    return res.fail("查询文档失败");
+  }
 });
 
 router.get("/search", async (req: Request, res: Response) => {
   const keyword = req.query.q as string; // 前端传 ?q=关键字
   console.log(keyword, "要模糊查询的关键词");
 
-  // 调用 service 查询文章
   const data = await articleService.search(keyword);
 
   return res.suc(data);

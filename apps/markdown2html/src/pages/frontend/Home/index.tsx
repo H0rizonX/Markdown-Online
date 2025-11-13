@@ -1,103 +1,129 @@
-import { useState, useMemo, type FC } from "react";
-import { Button, Input, Modal } from "antd";
-import { SearchOutlined } from "@ant-design/icons";
+import { useEffect, useState, type FC } from "react";
+import { Modal, type MenuProps } from "antd";
 import HomeMenu from "./components/menu";
 import HeaderBar from "./components/header";
-import FileGrid from "./components/file-grid";
-import NewDocumentPage from "./components/create/Index";
-// import { useUserStore } from "../../../store/user";
-// import { getAllArticles } from "./service";
+import NewDocumentPage from "./components/createDoc/Index";
+import DocumentListPanel from "./components/documentLists";
+import TeamLists from "./components/teamlists";
+import TeamForm from "./components/createTeam";
+import JoinTeamModal from "./components/joinTeam";
+import { getDocuments } from "./service";
+import useUserStore from "../../../stores/user";
+import type { FileItem } from "./interface";
+import { Blinds, Share2, User, Users } from "lucide-react";
+import MenuItem from "antd/es/menu/MenuItem";
+type MenuItem = Required<MenuProps>["items"][number];
+export type TabItem = {
+  key: string;
+  label?: string;
+  icon?: React.ReactNode;
+  value?: string;
+} & MenuItem;
 
-const allFiles = [...Array(100)].map((_, i) => ({
-  title: `文档 ${i + 1}`,
-  type: (i % 7 === 0 ? "sheet" : "doc") as "sheet" | "doc", // 关键：加上 `as` 强制类型断言
-  path: ["我的文档", "Web前端/运营平台", "周报", "技术研发部"][i % 4],
-  time: `6月${(i % 30) + 1}日 ${8 + (i % 10)}:0${i % 6}`,
-  tag: [null, "企业内公开", "团队可见", "仅自己可见"][i % 4],
-  author: "XXX",
-}));
-
-const pageSize = 20;
+const tabItems: TabItem[] = [
+  { key: "mainPage", label: "首页", value: "all", icon: <Blinds /> },
+  { key: "sharing", label: "共享", value: "shared", icon: <Share2 /> },
+  { key: "mine", label: "我的文档", value: "my", icon: <User /> },
+  {
+    type: "divider" as const,
+    key: "divider-1",
+  },
+  { key: "team", label: "团队", value: "team", icon: <Users /> },
+];
 
 const HomePage: FC = () => {
-  const [hoverIndex] = useState<number | null>(null);
-  console.log(hoverIndex);
-  const [searchKeyword, setSearchKeyword] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-
-  // const userInfo = useUserStore((state) => state.userInfo);
-
-  const filteredFiles = useMemo(() => {
-    const keyword = searchKeyword.trim().toLowerCase();
-    return !keyword
-      ? allFiles
-      : allFiles.filter((file) => file.title.toLowerCase().includes(keyword));
-  }, [searchKeyword]);
-
-  const paginatedFiles = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredFiles.slice(start, start + pageSize);
-  }, [filteredFiles, currentPage]);
-
+  const [currentTab, setCurrentTab] = useState<TabItem>(tabItems[0]);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  /*  useEffect(() => {
-    if (userInfo) {
-      const authorId = userInfo?.id;
 
-      const list = getAllArticles({ authorId });
+  const closeModal = () => setIsModalVisible(false);
+  const [teamRefreshKey, setTeamRefreshKey] = useState(0);
+  const [documentLists, setDocumentLists] = useState<FileItem[]>([]);
+  const { userInfo } = useUserStore();
+  const handleTeamCreated = () => {
+    closeModal();
+    setTeamRefreshKey((prev) => prev + 1); // 触发 TeamLists 刷新
+  };
 
-      console.log(list, "文章列表");
-    }
-  }, [userInfo]);*/
+  const handleDocCreated = (doc: FileItem) => {
+    console.log(doc, "修改的doc对象");
+    setDocumentLists((prev) => {
+      return [doc, ...prev];
+    });
+  };
+
+  useEffect(() => {
+    const fetchGetDocs = async () => {
+      try {
+        const currentUserId = userInfo?.id;
+        const currentType = currentTab.value;
+
+        const result = await getDocuments({
+          authorId: currentUserId!,
+          type: currentType!,
+        });
+
+        setDocumentLists(result.data as FileItem[]);
+      } catch (error) {
+        console.error("获取文档列表异常:", error);
+        setDocumentLists([]);
+      }
+    };
+
+    fetchGetDocs();
+  }, [currentTab, userInfo?.id]); // 当tabItems变化时重新获取
   return (
-    <div className="h-screen bg-white  flex flex-col overflow-auto">
+    <div className="h-screen bg-white flex flex-col overflow-auto">
       <HeaderBar />
       <div className="flex flex-1 overflow-y">
         <aside className="w-56 h-full">
-          <HomeMenu />
+          <HomeMenu
+            currentKey={currentTab.key}
+            onSelect={(key: string) => {
+              const tab = tabItems.find((t) => t.key === key);
+              if (tab) setCurrentTab(tab);
+            }}
+            tabs={tabItems}
+          />
         </aside>
 
-        <main className="flex-1 flex flex-col   px-4 py-6">
-          <div className="flex justify-between items-center mb-4 shrink-0">
-            <Input
-              placeholder="搜索文档标题"
-              allowClear
-              prefix={<SearchOutlined />}
-              className="w-full max-w-sm"
-              onChange={(e) => {
-                setSearchKeyword(e.target.value);
-                setCurrentPage(1);
-              }}
+        <main className="flex-1 flex flex-col px-4 py-6">
+          {currentTab.key === "team" ? (
+            <TeamLists
+              pageSize={12}
+              refreshKey={teamRefreshKey}
+              onCreate={() => setIsModalVisible(true)}
             />
-            <Button
-              className="ml-4"
-              type="primary"
-              onClick={() => setIsModalVisible(true)}
-            >
-              + 新建
-            </Button>
-          </div>
-
-          <div className="flex-1 overflow-auto pb-6">
-            <FileGrid
-              files={paginatedFiles}
-              currentPage={currentPage}
-              total={filteredFiles.length}
-              pageSize={pageSize}
-              onPageChange={(page) => setCurrentPage(page)}
+          ) : (
+            <DocumentListPanel
+              files={documentLists}
+              onCreate={() => setIsModalVisible(true)}
             />
-          </div>
+          )}
         </main>
       </div>
-      // HomePage.tsx
       <Modal
-        title="新建文档"
+        title={`新建 ${currentTab.label}`}
         open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
+        onCancel={closeModal}
         footer={null}
       >
-        <NewDocumentPage onSuccess={() => setIsModalVisible(false)} />
+        {currentTab.key === "team" ? (
+          <TeamForm
+            onSuccess={() => {
+              closeModal();
+              handleTeamCreated(); // 刷新团队列表
+            }}
+          />
+        ) : (
+          <NewDocumentPage
+            onSuccess={(doc) => {
+              closeModal();
+              handleDocCreated(doc); //更新doc
+            }}
+          />
+        )}
       </Modal>
+      <JoinTeamModal />
     </div>
   );
 };

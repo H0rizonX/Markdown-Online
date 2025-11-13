@@ -1,6 +1,6 @@
 import { type FC, useRef, useState, useEffect } from "react";
 import type { componentProps } from "../../interface";
-import { BookOpenCheck, Timer, Users } from "lucide-react";
+import { BookOpenCheck, Edit, Timer, Users } from "lucide-react";
 import { Tooltip } from "antd";
 import * as Y from "yjs";
 
@@ -16,7 +16,7 @@ const TopBar: FC<componentProps> = ({ isExpended, file, ydoc, awareness }) => {
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    
+
     if (newValue.length > MAX_LENGTH) {
       e.target.value = title; // 恢复原值
       showLimitTooltip();
@@ -24,7 +24,7 @@ const TopBar: FC<componentProps> = ({ isExpended, file, ydoc, awareness }) => {
     }
 
     setTitle(newValue);
-    
+
     // 同步到 Yjs（如果不是来自 Yjs 的更新）
     if (!isUpdatingFromYjs.current && ytextRef.current) {
       const currentYjsText = ytextRef.current.toString();
@@ -76,11 +76,11 @@ const TopBar: FC<componentProps> = ({ isExpended, file, ydoc, awareness }) => {
         // 保存当前光标位置
         const cursorPos = inputRef.current.selectionStart || 0;
         const oldValue = inputRef.current.value;
-        
+
         isUpdatingFromYjs.current = true;
         setTitle(newTitle);
         inputRef.current.value = newTitle;
-        
+
         // 恢复光标位置（如果内容长度变化，调整位置）
         setTimeout(() => {
           if (inputRef.current) {
@@ -89,7 +89,8 @@ const TopBar: FC<componentProps> = ({ isExpended, file, ydoc, awareness }) => {
             // 如果内容变短了，光标位置不能超过新长度
             const newCursorPos = Math.min(cursorPos, newLen);
             // 如果内容变长了，保持相对位置
-            const adjustedPos = oldLen > 0 ? Math.min(newCursorPos, newLen) : newLen;
+            const adjustedPos =
+              oldLen > 0 ? Math.min(newCursorPos, newLen) : newLen;
             inputRef.current.setSelectionRange(adjustedPos, adjustedPos);
           }
           isUpdatingFromYjs.current = false;
@@ -113,12 +114,12 @@ const TopBar: FC<componentProps> = ({ isExpended, file, ydoc, awareness }) => {
       setOnlineUsersCount(states.size);
     };
 
-    awareness.on('change', updateOnlineUsers);
+    awareness.on("change", updateOnlineUsers);
     updateOnlineUsers(); // 初始更新
 
     return () => {
       try {
-        awareness.off('change', updateOnlineUsers);
+        awareness.off("change", updateOnlineUsers);
       } catch {
         // noop
       }
@@ -163,13 +164,37 @@ const TopBar: FC<componentProps> = ({ isExpended, file, ydoc, awareness }) => {
         <div className="text-sm text-gray-500 flex gap-6">
           <span className="inline-flex items-center gap-1">
             <Users className="w-4 h-4" />
-            {file?.author} · 编辑
+            {file?.author.name} · 编辑
           </span>
           <span className="inline-flex items-center gap-1">
             <Timer className="w-4 h-4" />
-            {file?.time} · 创建
+            {file?.createdAt
+              ? new Date(file.createdAt).toLocaleString("zh-CN", {
+                  year: "2-digit",
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "未知时间"}{" "}
+            · 创建
           </span>
-          <span className="text-sm text-gray-500">{file?.path}</span>
+          <span className="inline-flex items-center gap-1">
+            <Edit className="w-4 h-4" />
+            {file?.updatedAt
+              ? new Date(file.updatedAt).toLocaleString("zh-CN", {
+                  year: "2-digit",
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "未知时间"}{" "}
+            · 修改
+          </span>
+          {file?.team && (
+            <span className="text-sm text-gray-500">{file?.team.name}</span>
+          )}
         </div>
       </div>
 

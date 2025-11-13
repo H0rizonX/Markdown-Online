@@ -12,4 +12,8 @@ declare module "express" {
     ) => void;
     fail: (err: string | Error, code?: number, status?: number) => void;
   }
+  interface Request {
+    file?: multer.File; // 单文件上传
+    files?: { [fieldname: string]: multer.File[] } | multer.File[]; // 多文件上传
+  }
 }

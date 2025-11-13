@@ -11,6 +11,10 @@ export interface articleType {
   content: string;
   createdAt?: Date;
   updatedAt?: Date;
+  visibility?: "team" | "personal";
+  structure?: Record<string, unknown> | null;
+  teamId?: number;
+  tags?: string[];
 }
 
 export class ArticleService {
@@ -19,23 +23,84 @@ export class ArticleService {
     return server.createRoom();
   }
 
-  save(data: Partial<Article>) {
-    return this.repo.save(data);
+  async save(data: Partial<Article>) {
+    // 先保存文章
+    const savedArticle = await this.repo.save(data);
+
+    // 如果文章有 teamId，则在 team_article 表中创建关联记录
+    if (data.teamId) {
+      await this.repo.manager.getRepository("team_articles").save({
+        articleId: savedArticle.id,
+        teamId: data.teamId,
+      });
+    }
+
+    return await this.repo.findOne({
+      where: { id: savedArticle.id },
+      relations: ["author", "team"],
+    });
   }
 
   delete(id: number) {
     return this.repo.delete(id);
   }
 
-  async findAll(authorId: number) {
-    return this.repo.find({
-      where: {
-        authorId, // 根据 authorId 查询
-      },
-      order: {
-        createdAt: "DESC", // 可选：按创建时间倒序
-      },
-    });
+  async findAllDocuments(authorId: number) {
+    // ① 查找用户所在团队
+    const teams = await this.repo.manager
+      .getRepository("team_user")
+      .createQueryBuilder("tu")
+      .where("tu.userId = :authorId", { authorId })
+      .select("tu.teamId", "teamId")
+      .getRawMany();
+
+    const teamIds = teams.map((t) => t.teamId);
+
+    // ② 构造查询：作者自己创建的文档 + 团队文章
+    const qb = this.repo
+      .createQueryBuilder("article")
+      .leftJoinAndSelect("article.author", "author")
+      .leftJoinAndSelect("article.team", "team")
+      .leftJoin("team_articles", "ta", "ta.articleId = article.id");
+
+    // ③ 条件：作者本人 OR 属于其团队
+    if (teamIds.length > 0) {
+      qb.where("article.authorId = :authorId", { authorId }).orWhere(
+        "ta.teamId IN (:...teamIds)",
+        { teamIds }
+      );
+    } else {
+      qb.where("article.authorId = :authorId", { authorId });
+    }
+
+    // ④ 排序
+    qb.orderBy("article.createdAt", "DESC");
+
+    // ⑤ 执行查询
+    return await qb.getMany();
+  }
+
+  async findMySharedDocuments(authorId: number) {
+    return await this.repo
+      .createQueryBuilder("article")
+      .innerJoin("team_articles", "ta", "ta.articleId = article.id")
+      .leftJoinAndSelect("article.team", "team") // 关联 team 表
+      .leftJoinAndSelect("article.author", "author") // 关联 user 表
+      .where("article.authorId = :authorId", { authorId })
+      .orderBy("article.createdAt", "DESC")
+      .getMany();
+  }
+
+  async findMyPrivateDocuments(authorId: number) {
+    return await this.repo
+      .createQueryBuilder("article")
+      .leftJoin("team_articles", "ta", "ta.articleId = article.id")
+      .leftJoinAndSelect("article.team", "team")
+      .leftJoinAndSelect("article.author", "author")
+      .where("article.authorId = :authorId", { authorId })
+      .andWhere("ta.articleId IS NULL")
+      .orderBy("article.createdAt", "DESC")
+      .getMany();
   }
 
   async update(id: number, data: Partial<Article>) {

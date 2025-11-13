@@ -4,16 +4,13 @@ import { result } from "./src/utils";
 import { database } from "./src/config/database";
 import userRoutes from "./src/controller/userController";
 import articleRoutes from "./src/controller/articleController";
+import teamRoutes from "./src/controller/teamController";
 import { CollabService } from "./src/service/CollabService";
 import { startWsServer } from "./src/ws-server";
 
 import { startYjsWsServer } from "./src/yjs-ws-server";
 import { expressjwt } from "express-jwt";
 import { webToken } from "./config";
-// import redis from "redis";
-// import nodemailer from "nodemailer";
-/* import { expressjwt } from "express-jwt";
-import { webToken } from "./config"; */
 
 export const server = new CollabService(8990);
 server.start();
@@ -40,6 +37,7 @@ app.use(
       { url: /^\/users\/?$/, methods: ["GET", "POST", "PUT", "DELETE"] },
       { url: /^\/users\/register\/?$/, methods: ["POST"] },
       { url: /^\/users\/info\/?$/, methods: ["GET"] },
+      { url: /^\/users\/send-email\/?$/, methods: ["POST"] },
     ],
   })
 );
@@ -51,7 +49,7 @@ database
 
     app.use("/users", userRoutes);
     app.use("/article", articleRoutes);
-
+    app.use("/team", teamRoutes);
     app.listen(3003, () =>
       console.log("Server started at http://localhost:3003")
     );
