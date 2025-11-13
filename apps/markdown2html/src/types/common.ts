@@ -18,10 +18,6 @@ export type ArticleType = {
   teamId?: number;
   tags?: string[];
 };
-
-export type ArticleType = {
-  title: string;
-};
 export type dataType = {
   token?: string;
   user?: UserType;
