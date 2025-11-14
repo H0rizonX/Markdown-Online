@@ -7,6 +7,7 @@ const HomePage = lazy(() => import("../pages/frontend/Home"));
 const Login = lazy(() => import("../pages/frontend/LoginPage"));
 const CollabDemo = lazy(() => import("../pages/frontend/CollabDemo"));
 const ProfileCenter = lazy(() => import("../pages/frontend/Profile/Index"));
+const AdminDashboard = lazy(() => import("../pages/admin"));
 
 const router = createBrowserRouter([
   {
@@ -46,6 +47,14 @@ const router = createBrowserRouter([
     element: (
       <Suspense fallback={<LoadingPage />}>
         <ProfileCenter />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/admin",
+    element: (
+      <Suspense fallback={<LoadingPage />}>
+        <AdminDashboard />
       </Suspense>
     ),
   },
