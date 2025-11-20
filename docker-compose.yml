@@ -1,0 +1,61 @@
+version: "3.8"
+
+services:
+  # 后端服务
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: markdown-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=mysql
+      - DB_USER=markdown_user
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=MarkdownDB
+    depends_on:
+      - mysql
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # 前端服务
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: markdown-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: markdown-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: MarkdownDB
+      MYSQL_USER: markdown_user
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+    restart: unless-stopped
+    networks:
+      - app-network
+
+volumes:
+  mysql_data:
+
+networks:
+  app-network:
+    driver: bridge
