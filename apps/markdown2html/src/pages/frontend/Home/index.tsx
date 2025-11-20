@@ -1,4 +1,4 @@
-import { useEffect, useState, type FC } from "react";
+import { useCallback, useEffect, useState, type FC } from "react";
 import { Modal, type MenuProps } from "antd";
 import HomeMenu from "./components/menu";
 import HeaderBar from "./components/header";
@@ -45,32 +45,31 @@ const HomePage: FC = () => {
   };
 
   const handleDocCreated = (doc: FileItem) => {
-    console.log(doc, "修改的doc对象");
     setDocumentLists((prev) => {
       return [doc, ...prev];
     });
   };
 
+  const fetchGetDocs = useCallback(async () => {
+    try {
+      const currentUserId = userInfo?.id;
+      const currentType = currentTab.value;
+
+      const result = await getDocuments({
+        authorId: currentUserId!,
+        type: currentType!,
+      });
+
+      setDocumentLists(result.data as FileItem[]);
+    } catch (error) {
+      console.error("获取文档列表异常:", error);
+      setDocumentLists([]);
+    }
+  }, [currentTab, userInfo?.id]); // 依赖数组完整
+
   useEffect(() => {
-    const fetchGetDocs = async () => {
-      try {
-        const currentUserId = userInfo?.id;
-        const currentType = currentTab.value;
-
-        const result = await getDocuments({
-          authorId: currentUserId!,
-          type: currentType!,
-        });
-
-        setDocumentLists(result.data as FileItem[]);
-      } catch (error) {
-        console.error("获取文档列表异常:", error);
-        setDocumentLists([]);
-      }
-    };
-
     fetchGetDocs();
-  }, [currentTab, userInfo?.id]); // 当tabItems变化时重新获取
+  }, [fetchGetDocs]);
   return (
     <div className="h-screen bg-white flex flex-col overflow-auto">
       <HeaderBar />
@@ -97,6 +96,9 @@ const HomePage: FC = () => {
             <DocumentListPanel
               files={documentLists}
               onCreate={() => setIsModalVisible(true)}
+              onDeleteSuccess={async () => {
+                await fetchGetDocs();
+              }}
             />
           )}
         </main>

@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Canvas } from "../../../Canvas";
 import type { FileGridProps, FileItem } from "../../interface";
 import { getMessageApi } from "../../../../../utils";
+import useUserStore from "../../../../../stores/user";
+import { delDocs } from "./service";
 
 const FileGrid: FC<FileGridProps> = ({
   files,
@@ -12,9 +14,10 @@ const FileGrid: FC<FileGridProps> = ({
   total,
   pageSize,
   onPageChange,
+  onDeleteSuccess,
 }) => {
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
-
+  const { userInfo } = useUserStore();
   const closeDoc = () => {
     setSelectedFile(null);
   };
@@ -45,8 +48,11 @@ const FileGrid: FC<FileGridProps> = ({
   ) => {
     event?.stopPropagation();
     try {
-      console.log(file, "选择的file");
+      const id = +file.id!;
+      const authorId = +file.authorId;
+      await delDocs({ id, authorId });
       msgBox.success("文档删除成功");
+      onDeleteSuccess?.();
     } catch (error) {
       message.error("文档删除失败");
       console.error("删除文档失败:", error);
@@ -75,22 +81,24 @@ const FileGrid: FC<FileGridProps> = ({
                 className="p-3 border rounded hover:shadow-md hover:border-blue-400 transition cursor-pointer 
                           h-36 flex flex-col relative group"
               >
-                <div className="absolute bottom-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Popconfirm
-                    title="确定要删除这个文档吗？"
-                    description="删除后将无法恢复"
-                    onConfirm={(e) => handleDelete(file, e)}
-                    onCancel={handleCancel}
-                    okText="确定"
-                    cancelText="取消"
-                    okType="danger"
-                  >
-                    <Trash2
-                      className="w-4 h-4 text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
-                      onClick={handleTrashClick}
-                    />
-                  </Popconfirm>
-                </div>
+                {file.authorId === userInfo?.id && (
+                  <div className="absolute bottom-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Popconfirm
+                      title="确定要删除这个文档吗？"
+                      description="删除后将无法恢复"
+                      onConfirm={(e) => handleDelete(file, e)}
+                      onCancel={handleCancel}
+                      okText="确定"
+                      cancelText="取消"
+                      okType="danger"
+                    >
+                      <Trash2
+                        className="w-4 h-4 text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
+                        onClick={handleTrashClick}
+                      />
+                    </Popconfirm>
+                  </div>
+                )}
 
                 <div className="flex items-center gap-2 mb-2 flex-shrink-0">
                   {file.type === "sheet" ? (
@@ -193,7 +201,11 @@ const FileGrid: FC<FileGridProps> = ({
               transition={{ duration: 0.5, ease: "easeInOut" }}
               style={{ willChange: "transform, opacity" }}
             >
-              <Canvas file={selectedFile} onClose={closeDoc} />
+              <Canvas
+                file={selectedFile}
+                onClose={closeDoc}
+                onSelectDoc={setSelectedFile}
+              />
             </motion.div>
           </>
         )}

@@ -19,17 +19,49 @@ export class TeamService {
     return this.repo.save(data);
   }
 
-  async delete(id: number) {
-    //  删除 team_user 表中所有关联
-    await database
-      .createQueryBuilder()
-      .delete()
-      .from("team_user") // 直接指定表名
-      .where("teamId = :teamId", { teamId: id })
-      .execute();
+  async delete(teamId: number) {
+    return await database.transaction(async (manager) => {
+      // 1. 查出所有该 team 下的 articleId
+      const articleIds = await manager
+        .createQueryBuilder()
+        .select("ta.articleId", "articleId")
+        .from("team_articles", "ta")
+        .where("ta.teamId = :teamId", { teamId })
+        .getRawMany();
 
-    // 删除 team 表
-    return this.repo.delete(id);
+      const ids = articleIds.map((a) => a.articleId);
+
+      if (ids.length > 0) {
+        // 2. 删除 article 表中所有对应的文章
+        await manager
+          .createQueryBuilder()
+          .delete()
+          .from("articles")
+          .where("id IN (:...ids)", { ids })
+          .execute();
+      }
+
+      // 3. 删除 team_articles 中关联
+      await manager
+        .createQueryBuilder()
+        .delete()
+        .from("team_articles")
+        .where("teamId = :teamId", { teamId })
+        .execute();
+
+      // 4. 删除 team_user 中关联
+      await manager
+        .createQueryBuilder()
+        .delete()
+        .from("team_user")
+        .where("teamId = :teamId", { teamId })
+        .execute();
+
+      // 5. 删除 team 表自身记录
+      await manager.getRepository(Team).delete(teamId);
+
+      return true;
+    });
   }
 
   async findAll(userId: number) {
@@ -76,19 +108,29 @@ export class TeamService {
   }
 
   async leaveTeam(teamId: number, userId: number) {
-    // 查团队是否存在
-    const team = await this.repo.findOneBy({ id: teamId });
-    if (!team) throw new Error("团队不存在");
+    return await database.transaction(async (manager) => {
+      // 1. 查团队是否存在
+      const team = await manager.getRepository(Team).findOneBy({ id: teamId });
+      if (!team) throw new Error("团队不存在");
 
-    //  删除 team_user 表中对应记录
-    const result = await database
-      .createQueryBuilder()
-      .delete()
-      .from("team_user")
-      .where("teamId = :teamId AND userId = :userId", { teamId, userId })
-      .execute();
+      // 2. 删除该用户在该团队下创建的 article
+      await manager
+        .createQueryBuilder()
+        .delete()
+        .from("articles")
+        .where("teamId = :teamId AND authorId = :userId", { teamId, userId })
+        .execute();
 
-    return result;
+      // 3. 删除 team_user 表中的关联
+      const result = await manager
+        .createQueryBuilder()
+        .delete()
+        .from("team_user")
+        .where("teamId = :teamId AND userId = :userId", { teamId, userId })
+        .execute();
+
+      return result;
+    });
   }
 
   // 查询团队成员

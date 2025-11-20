@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button, Input, Form, Modal } from "antd";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
 import {
   Login,
@@ -35,7 +35,8 @@ const LoginPage = () => {
   // 弹窗
   const msgBox = getMessageApi();
   type AuthValues = Partial<LoginType & registerType>;
-
+  // 历史路由
+  const location = useLocation();
   // === 通用验证码发送函数 ===
   const handleSendCode = async (
     email: string,
@@ -89,7 +90,10 @@ const LoginPage = () => {
             const userInfo = result.data as dataType;
             login(userInfo.user!);
           }
-          navigator("/");
+          const from = location.state?.from?.pathname || "/"; // 默认首页
+          navigator(from + (location.state?.from?.search || ""), {
+            replace: true,
+          });
           msgBox.success(res.message);
         } else {
           msgBox.warning(res.message);

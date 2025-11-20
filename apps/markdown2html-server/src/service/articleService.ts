@@ -41,8 +41,18 @@ export class ArticleService {
     });
   }
 
-  delete(id: number) {
-    return this.repo.delete(id);
+  async delete(id: number, userId: number) {
+    return await database.transaction(async (manager) => {
+      // 查找该用户的文章
+      const article = await manager
+        .getRepository(Article)
+        .findOne({ where: { id, authorId: userId } });
+
+      if (!article) throw new Error("文章不存在或无权限删除");
+
+      // 删除文章记录
+      return await manager.getRepository(Article).delete(id);
+    });
   }
 
   async findAllDocuments(authorId: number) {

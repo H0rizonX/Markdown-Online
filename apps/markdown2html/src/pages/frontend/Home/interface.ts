@@ -16,6 +16,7 @@ type FileGridProps = {
   total: number;
   pageSize: number;
   onPageChange: (page: number) => void;
+  onDeleteSuccess?: () => void;
 };
 
 export type { FileItem, FileGridProps };

@@ -5,17 +5,16 @@ import type { WebsocketProvider } from "y-websocket";
 
 interface CanvasProps {
   file?: FileItem;
-  onClose?:()=>void;
+  onClose?: () => void;
+  onSelectDoc?: (doc: FileItem) => void;
 }
-type componentProps = CanvasProps &{
-    isExpended:boolean;
-    setIsExpended?: (isExpended: boolean) => void;
-    text?:string;
-    ydoc?: Y.Doc;
-    provider?: WebsocketProvider;
-    awareness?: Awareness;
+type componentProps = CanvasProps & {
+  isExpended: boolean;
+  setIsExpended?: (isExpended: boolean) => void;
+  text?: string;
+  ydoc?: Y.Doc;
+  provider?: WebsocketProvider;
+  awareness?: Awareness;
 };
 
-
-
-export type {componentProps,CanvasProps}
+export type { componentProps, CanvasProps };

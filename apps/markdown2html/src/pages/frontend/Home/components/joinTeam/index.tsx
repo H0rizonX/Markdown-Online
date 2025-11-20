@@ -25,8 +25,8 @@ const JoinTeamModal: FC = () => {
   const handleJoinTeam = async () => {
     if (!token) return;
     try {
-      const res = await join({ token, userId: userInfo?.id ?? 0 });
-      msgBox.success(res.data as string);
+      await join({ token, userId: userInfo?.id ?? 0 });
+      msgBox.success("加入团队成功!");
 
       // 关闭弹窗
       setIsModalVisible(false);

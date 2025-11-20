@@ -9,7 +9,7 @@ import {
   type MenuProps,
 } from "antd";
 import type { FC } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import type { dataType } from "../../../../../types/common";
 import useUserStore from "../../../../../stores/user";
@@ -24,10 +24,11 @@ const HeaderBar: FC = () => {
 
   const { logout, login } = useUserStore();
   const { token, clearToken } = useTokenStore();
+  const location = useLocation();
   useEffect(() => {
     const fetchUser = async () => {
       if (!token) {
-        navigator("/login");
+        navigator("/login", { state: { from: location } });
         return;
       }
       try {
@@ -36,11 +37,11 @@ const HeaderBar: FC = () => {
         if (result && result.user) {
           login(result.user);
         } else {
-          navigator("/login");
+          navigator("/login", { state: { from: location } });
         }
       } catch (err) {
         console.error("获取用户信息失败:", err);
-        navigator("/login");
+        navigator("/login", { state: { from: location } });
       }
     };
 

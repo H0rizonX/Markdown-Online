@@ -8,33 +8,41 @@ import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
 
 // 配置：默认连接 ws://<host>:3004，房间 demo（可用 window.VITE_YJS_WS_SERVER 覆盖）
-const DEFAULT_SERVER = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:3004`;
-const win = window as unknown as { VITE_YJS_WS_SERVER?: string; VITE_YJS_WS_ROOM?: string };
+const DEFAULT_SERVER = `${location.protocol === "https:" ? "wss" : "ws"}://${location.hostname}:3004`;
+const win = window as unknown as {
+  VITE_YJS_WS_SERVER?: string;
+  VITE_YJS_WS_ROOM?: string;
+};
 const SERVER = win.VITE_YJS_WS_SERVER || DEFAULT_SERVER;
 
-export const Canvas: FC<CanvasProps> = ({ file, onClose }) => {
+export const Canvas: FC<CanvasProps> = ({ file, onClose, onSelectDoc }) => {
   const [isExpended, setIsExpended] = useState(false);
 
-  // 使用文件 path 作为房间名，确保每个文档有独立的协同空间
-  const ROOM = file?.path || "default";
+  const [currentFile, setCurrentFile] = useState(file);
 
+  useEffect(() => {
+    setCurrentFile(file);
+  }, [file]);
+
+  // 使用文件 path 作为房间名，确保每个文档有独立的协同空间
+  const ROOM = String(currentFile?.id) || "default";
   // 创建共享的 Yjs 文档和 WebSocket Provider（供标题和内容使用）
   const { ydoc, provider, awareness } = useMemo(() => {
     // 使用文件 path 作为全局 key，确保每个文档有独立的 Provider 和 Doc
     const globalKey = `__YWS__${SERVER}__${ROOM}`;
     const docKey = `__YDOC__${ROOM}`;
     const cache = window as unknown as Record<string, unknown>;
-    
+
     // 先检查是否已有 doc（确保内容不丢失）
     let doc = cache[docKey] as Y.Doc | undefined;
     if (!doc) {
       doc = new Y.Doc();
       cache[docKey] = doc;
     }
-    
+
     // 检查是否已有 Provider
     let wsProvider = cache[globalKey] as WebsocketProvider | undefined;
-    
+
     if (!wsProvider) {
       wsProvider = new WebsocketProvider(SERVER, ROOM, doc);
       cache[globalKey] = wsProvider;
@@ -49,7 +57,7 @@ export const Canvas: FC<CanvasProps> = ({ file, onClose }) => {
         cache[globalKey] = wsProvider;
       }
     }
-    
+
     return { ydoc: doc, provider: wsProvider, awareness: wsProvider.awareness };
   }, [ROOM]);
 
@@ -60,18 +68,18 @@ export const Canvas: FC<CanvasProps> = ({ file, onClose }) => {
     // 连接
     try {
       provider.connect();
-      console.info('[Canvas] 已连接到协同服务器');
+      console.info("[Canvas] 已连接到协同服务器");
     } catch (error) {
-      console.error('[Canvas] 连接失败:', error);
+      console.error("[Canvas] 连接失败:", error);
     }
 
     // 组件卸载时断开连接
     return () => {
       try {
         provider.disconnect();
-        console.info('[Canvas] 已断开协同服务器连接');
+        console.info("[Canvas] 已断开协同服务器连接");
       } catch (error) {
-        console.error('[Canvas] 断开连接失败:', error);
+        console.error("[Canvas] 断开连接失败:", error);
       }
     };
   }, [provider]);
@@ -79,8 +87,8 @@ export const Canvas: FC<CanvasProps> = ({ file, onClose }) => {
   return (
     <div className="flex flex-col w-full h-full relative overflow-hidden">
       <div className="h-16 flex items-center justify-center">
-        <TopBar 
-          isExpended={isExpended} 
+        <TopBar
+          isExpended={isExpended}
           file={file}
           ydoc={ydoc}
           awareness={awareness}
@@ -93,11 +101,14 @@ export const Canvas: FC<CanvasProps> = ({ file, onClose }) => {
             isExpended={isExpended}
             setIsExpended={setIsExpended}
             onClose={onClose}
+            onSelectDoc={(doc) => {
+              onSelectDoc?.(doc); // 切换当前文档
+            }}
           />
         </div>
 
         <div className="flex-1 flex items-center justify-center overflow-hidden -ml-64">
-          <Tiptap 
+          <Tiptap
             isExpended={isExpended}
             ydoc={ydoc}
             provider={provider}

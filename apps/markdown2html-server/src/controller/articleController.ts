@@ -49,12 +49,19 @@ router.put("/update/:id", async (req: Request, res: Response) => {
 });
 
 router.delete("/delete/:id", async (req: Request, res: Response) => {
-  const articleId = req.params.id;
+  const articleId = Number(req.params.id);
+  const userId = Number(req.query.userId); // 从查询参数获取
 
-  const data = await articleService.delete(Number(articleId));
+  if (!userId) return res.fail("缺少 userId 参数");
 
-  if (data.affected === 0) return res.suc("文章不存在");
-  return res.suc("删除成功");
+  try {
+    const data = await articleService.delete(articleId, userId);
+
+    if (data.affected === 0) return res.suc("文章不存在或无权限");
+    return res.suc("删除成功");
+  } catch (e: unknown) {
+    return res.fail(e as Error);
+  }
 });
 
 router.get("/getDocs", async (req: Request, res: Response) => {

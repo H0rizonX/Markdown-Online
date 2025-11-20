@@ -8,12 +8,14 @@ interface DocumentListPanelProps {
   files: FileItem[];
   pageSize?: number;
   onCreate?: () => void;
+  onDeleteSuccess?: () => void;
 }
 
 const DocumentListPanel: React.FC<DocumentListPanelProps> = ({
   files,
   pageSize = 16,
   onCreate,
+  onDeleteSuccess,
 }) => {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,6 +58,7 @@ const DocumentListPanel: React.FC<DocumentListPanelProps> = ({
           total={filteredFiles.length}
           pageSize={pageSize}
           onPageChange={setCurrentPage}
+          onDeleteSuccess={onDeleteSuccess}
         />
       </div>
     </div>
