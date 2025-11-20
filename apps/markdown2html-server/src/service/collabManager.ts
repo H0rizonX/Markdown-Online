@@ -17,4 +17,3 @@ export const ensureCollabServer = (): CollabService | null => {
 };
 
 export const getCollabServer = (): CollabService | null => instance;
-
