@@ -32,13 +32,13 @@ CREATE TABLE `articles` (
   `visibility` enum('team','personal') NOT NULL DEFAULT 'personal',
   `structure` json DEFAULT NULL,
   `teamId` int DEFAULT NULL,
-  `tags` json DEFAULT NULL,
+  `tags` text,
   PRIMARY KEY (`id`),
   KEY `FK_65d9ccc1b02f4d904e90bd76a34` (`authorId`),
   KEY `FK_729ed807ff9e2b237b1079f56f4` (`teamId`),
   CONSTRAINT `FK_65d9ccc1b02f4d904e90bd76a34` FOREIGN KEY (`authorId`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `FK_729ed807ff9e2b237b1079f56f4` FOREIGN KEY (`teamId`) REFERENCES `teams` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=95204578 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -47,6 +47,7 @@ CREATE TABLE `articles` (
 
 LOCK TABLES `articles` WRITE;
 /*!40000 ALTER TABLE `articles` DISABLE KEYS */;
+INSERT INTO `articles` VALUES (12955301,'团队文档','',123456,'2025-11-20 06:46:52.957593','2025-11-20 06:46:52.957593','team',NULL,15013724,'项目B,重要文档,测试'),(52234645,'个人文档','',6,'2025-11-20 06:40:52.236780','2025-11-20 06:40:52.236780','personal',NULL,NULL,'项目B,重要文档,测试'),(86463040,'测试团队文档','',123456,'2025-11-20 06:26:26.466127','2025-11-20 06:26:26.466127','team',NULL,15013724,'测试');
 /*!40000 ALTER TABLE `articles` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -59,12 +60,11 @@ DROP TABLE IF EXISTS `team_articles`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `team_articles` (
   `teamId` int NOT NULL,
-  `articlesId` int NOT NULL,
-  `addedAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`teamId`,`articlesId`),
-  KEY `fk_team_articles_articles` (`articlesId`),
-  CONSTRAINT `fk_team_articles_articles` FOREIGN KEY (`articlesId`) REFERENCES `articles` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_team_articles_team` FOREIGN KEY (`teamId`) REFERENCES `teams` (`id`) ON DELETE CASCADE
+  `articleId` int NOT NULL,
+  PRIMARY KEY (`teamId`,`articleId`),
+  KEY `FK_12b6a4e4b19a92339ccebe0c1d5` (`articleId`),
+  CONSTRAINT `FK_12b6a4e4b19a92339ccebe0c1d5` FOREIGN KEY (`articleId`) REFERENCES `articles` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `FK_e3960c3b883ba49c2183c07d8a1` FOREIGN KEY (`teamId`) REFERENCES `teams` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -74,6 +74,7 @@ CREATE TABLE `team_articles` (
 
 LOCK TABLES `team_articles` WRITE;
 /*!40000 ALTER TABLE `team_articles` DISABLE KEYS */;
+INSERT INTO `team_articles` VALUES (15013724,12955301),(15013724,86463040);
 /*!40000 ALTER TABLE `team_articles` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -101,7 +102,7 @@ CREATE TABLE `team_user` (
 
 LOCK TABLES `team_user` WRITE;
 /*!40000 ALTER TABLE `team_user` DISABLE KEYS */;
-INSERT INTO `team_user` VALUES (15306553,6);
+INSERT INTO `team_user` VALUES (15013724,6),(15013724,123456);
 /*!40000 ALTER TABLE `team_user` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -132,7 +133,7 @@ CREATE TABLE `teams` (
 
 LOCK TABLES `teams` WRITE;
 /*!40000 ALTER TABLE `teams` DISABLE KEYS */;
-INSERT INTO `teams` VALUES (15306553,'测试团队改名',6,'2025-11-11 16:45:15.321770','2025-11-11 20:08:28.000000','用来测试团队改名','测试');
+INSERT INTO `teams` VALUES (15013724,'测试成员',6,'2025-11-20 13:48:35.024024','2025-11-20 13:48:35.024024','测试成员对文章的修改','测试');
 /*!40000 ALTER TABLE `teams` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -159,7 +160,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (6,'user168','2898291273@qq.com','https://api.dicebear.com/7.x/miniavs/svg?seed=1','$2b$10$E9et/enkwHJYB3ogLUA86e3rUiP/d9zT59FHSVfxySwH1VFB4JvoG'),(123456,'宇宙无敌霸王龙','1572121126@qq.com','https://api.dicebear.com/7.x/miniavs/svg?seed=1','$2b$10$YLycrbSyVmQaZmT7gc4RVeFMwxtVC030t9IhaEWYAcVW7K7x7HXfC'),(71225489,'user400','431728568@qq.com','https://api.dicebear.com/7.x/miniavs/svg?seed=1','$2b$10$v8P91J6EOWTgE1nBPVyHGO.MEMxcBQTBDZnbXz2miSLJ9IkYUG3AG');
+INSERT INTO `users` VALUES (6,'我是超级无敌霸王龙','2898291273@qq.com','http://markdown-online.oss-cn-hangzhou.aliyuncs.com/uploads/1762926174304_1762926174168.jpg','$2b$10$YLycrbSyVmQaZmT7gc4RVeFMwxtVC030t9IhaEWYAcVW7K7x7HXfC'),(123456,'宇宙无敌霸王龙','1572121126@qq.com','https://api.dicebear.com/7.x/miniavs/svg?seed=1','$2b$10$YLycrbSyVmQaZmT7gc4RVeFMwxtVC030t9IhaEWYAcVW7K7x7HXfC'),(71225489,'user400','431728568@qq.com','https://api.dicebear.com/7.x/miniavs/svg?seed=1','$2b$10$v8P91J6EOWTgE1nBPVyHGO.MEMxcBQTBDZnbXz2miSLJ9IkYUG3AG');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -176,4 +177,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-11 20:13:59
+-- Dump completed on 2025-11-20 15:15:29
