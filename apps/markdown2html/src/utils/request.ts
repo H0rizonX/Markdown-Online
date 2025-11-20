@@ -13,10 +13,16 @@ const msgBox = getMessageApi();
 import type { resType } from "../types/common";
 // 新增：引入全局提示
 import { message } from "antd";
+const baseURL =
+  import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL !== ""
+    ? import.meta.env.VITE_API_BASE_URL
+    : "/api";
+
 // 创建实例
 const request: AxiosInstance = axios.create({
-  baseURL: "/api",
-  timeout: 5000,
+  baseURL,
+  timeout: 15000,
+  withCredentials: true,
 });
 
 // 请求拦截器

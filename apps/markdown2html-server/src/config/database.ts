@@ -4,15 +4,16 @@ import { Users } from "../entity/user";
 import { Article } from "../entity/article";
 import { Team } from "../entity/team";
 import { TeamArticle } from "../entity/teamArticles";
+import { env } from "./env";
 
 export const database = new DataSource({
   type: "mysql",
-  host: "localhost",
-  port: 3306,
-  username: "root",
-  password: "123456",
-  database: "markdown",
-  synchronize: true,
-  logging: false,
+  host: env.db.host,
+  port: env.db.port,
+  username: env.db.username,
+  password: env.db.password,
+  database: env.db.database,
+  synchronize: env.db.synchronize,
+  logging: env.db.logging,
   entities: [Users, Article, Team, TeamArticle],
 });

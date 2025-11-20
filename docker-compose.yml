@@ -1,31 +1,42 @@
 version: "3.8"
 
 services:
-  # 后端服务
   backend:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: apps/markdown2html-server/Dockerfile
     container_name: markdown-backend
-    ports:
-      - "3000:3000"
     environment:
-      - NODE_ENV=production
-      - DB_HOST=mysql
-      - DB_USER=markdown_user
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=MarkdownDB
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3003
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: markdown_user
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: MarkdownDB
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET}
+      WS_PORT: 3001
+      YJS_WS_PORT: 3004
+      COLLAB_PORT: 8990
+    ports:
+      - "3003:3003"
+      - "3001:3001"
+      - "3004:3004"
+      - "8990:8990"
     depends_on:
       - mysql
+      - redis
     restart: unless-stopped
     networks:
       - app-network
 
-  # 前端服务
   frontend:
     build:
       context: .
-      dockerfile: frontend/Dockerfile
+      dockerfile: apps/markdown2html/Dockerfile
     container_name: markdown-frontend
     ports:
       - "80:80"
@@ -35,7 +46,6 @@ services:
     networks:
       - app-network
 
-  # MySQL 数据库
   mysql:
     image: mysql:8.0
     container_name: markdown-mysql
@@ -46,9 +56,17 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "3306:3306"
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: markdown-redis
+    ports:
+      - "6379:6379"
     restart: unless-stopped
     networks:
       - app-network

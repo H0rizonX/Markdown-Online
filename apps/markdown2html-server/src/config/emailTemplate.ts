@@ -1,5 +1,7 @@
+import { env } from "./env";
+
 export const getMailOptions = (toEmail: string, code: number) => ({
-  from: "fordream.you@qq.com",
+  from: env.mail.from || "noreply@example.com",
   to: toEmail,
   subject: "您的验证码",
   html: `

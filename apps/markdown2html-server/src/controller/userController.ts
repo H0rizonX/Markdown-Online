@@ -3,11 +3,10 @@ import express, { Response, Request } from "express";
 import { UserService } from "../service/userService";
 import expressJoi from "@escook/express-joi";
 import { userCreateSchema } from "../schema/user";
-import { generateShortId, generateSnowflakeId } from "../utils";
+import { generateShortId, generateSnowflakeId, mailer } from "../utils";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { webToken } from "../../config";
-import { transporterQQ } from "../utils";
+import { env } from "../config/env";
 import { getMailOptions } from "../config/emailTemplate";
 import redis from "../config/redis";
 import fs from "fs";
@@ -20,7 +19,7 @@ const upload = multer({ dest: "uploads/" });
 
 const getUserInfo = async (token) => {
   // 验证并解码 token
-  const decoded = jwt.verify(token, webToken.jwtSecretKey) as {
+  const decoded = jwt.verify(token, env.jwt.secret) as {
     userId: number;
   };
 
@@ -47,8 +46,8 @@ router.post("/", async (req: Request, res: Response) => {
   if (!isPasswordValid) {
     return res.fail("用户名或密码错误");
   }
-  const tokenStr = jwt.sign({ userId: user.id }, webToken.jwtSecretKey, {
-    expiresIn: webToken.expiresIn,
+  const tokenStr = jwt.sign({ userId: user.id }, env.jwt.secret, {
+    expiresIn: env.jwt.expiresIn,
   });
   return res.suc({ token: tokenStr }, 200, "登录成功");
 });
@@ -139,8 +138,12 @@ router.post("/send-email", async (req: Request, res: Response) => {
     return res.fail("请求过于频繁，请稍后再试");
   }
 
+  if (!mailer) {
+    return res.fail("邮件服务未启用，请联系管理员");
+  }
+
   try {
-    await transporterQQ.sendMail(getMailOptions(fromEmail, code));
+    await mailer.sendMail(getMailOptions(fromEmail, code));
     res.suc(null, 200, "验证码发送成功", 0);
     await redis.set(fromEmail, code, "EX", 300); // 5分钟过期
     await redis.set(limitKey, "1", "EX", 60); // 60秒限制

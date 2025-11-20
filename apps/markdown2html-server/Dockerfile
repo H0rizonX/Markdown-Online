@@ -1,57 +1,45 @@
-# 多阶段构建
 FROM node:20-alpine AS deps
 
-# 安装 pnpm
-RUN npm install -g pnpm
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
 
-WORKDIR /app
+WORKDIR /repo
 
-# 复制包管理文件
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY backend/package.json ./backend/
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/markdown2html-server/package.json apps/markdown2html-server/
 
-# 安装依赖
-RUN pnpm install --frozen-lockfile --filter backend...
+RUN pnpm install --frozen-lockfile --filter markdown2html-server...
 
-# 构建阶段
-FROM node:20-alpine AS builder
+FROM deps AS build
 
-RUN npm install -g pnpm
-
-WORKDIR /app
-
-# 复制依赖
-COPY --from=deps /app/node_modules ./node_modules
-
-# 复制源代码
 COPY . .
-COPY --from=deps /app/backend/node_modules ./backend/node_modules
 
-# 构建应用（如果有构建步骤）
-# RUN pnpm run --filter backend build
+RUN pnpm --filter markdown2html-server build
 
-# 生产阶段
 FROM node:20-alpine AS runner
 
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+ENV NODE_ENV=production
+RUN corepack enable
+
 WORKDIR /app
 
-# 创建非root用户
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nextjs -u 1001
+COPY --from=build /repo/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=build /repo/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build /repo/package.json ./package.json
+COPY --from=build /repo/apps/markdown2html-server/package.json ./apps/markdown2html-server/package.json
 
-# 从构建阶段复制文件
-COPY --from=builder --chown=nextjs:nodejs /app/backend ./backend
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+RUN pnpm install --frozen-lockfile --prod --filter markdown2html-server...
 
-# 切换到非root用户
-USER nextjs
+COPY --from=build /repo/apps/markdown2html-server/dist ./apps/markdown2html-server/dist
 
-# 暴露端口
-EXPOSE 3000
+WORKDIR /app/apps/markdown2html-server
 
-# 健康检查
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/health || exit 1
+EXPOSE 3003
 
-# 启动命令
-CMD ["node", "backend/app.js"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=5 \
+  CMD wget -q -O - http://localhost:3003/health || exit 1
+
+CMD ["node", "dist/app.js"]

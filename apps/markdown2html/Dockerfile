@@ -1,35 +1,33 @@
-# 构建阶段
-FROM node:20-alpine AS builder
+FROM node:20-alpine AS deps
 
-RUN npm install -g pnpm
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
 
-WORKDIR /app
+WORKDIR /repo
 
-# 复制包管理文件
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY frontend/package.json ./frontend/
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/markdown2html/package.json apps/markdown2html/
 
-# 安装依赖
-RUN pnpm install --frozen-lockfile --filter frontend...
+RUN pnpm install --frozen-lockfile --filter markdown2html...
 
-# 复制源代码并构建
+FROM deps AS build
+
 COPY . .
-RUN pnpm run --filter frontend build
 
-# 生产阶段 - Nginx
-FROM nginx:alpine
+ARG VITE_API_BASE_URL=/api
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
-# 复制构建好的静态文件
-COPY --from=builder /app/frontend/dist /usr/share/nginx/html
+RUN pnpm --filter markdown2html build
 
-# 复制 Nginx 配置
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+FROM nginx:1.27-alpine AS runner
 
-# 暴露端口
+COPY apps/markdown2html/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /repo/apps/markdown2html/dist /usr/share/nginx/html
+
 EXPOSE 80
 
-# 健康检查
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost/ || exit 1
+  CMD wget -q -O - http://localhost/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]

@@ -1,8 +1,8 @@
 // src/service/ArticleServer.ts
-import { server } from "../../app";
 import { Article } from "../entity/article";
 import { database } from "../config/database";
 import { Like } from "typeorm";
+import { getCollabServer } from "./collabManager";
 
 export interface articleType {
   id: number;
@@ -20,6 +20,10 @@ export interface articleType {
 export class ArticleService {
   private repo = database.getRepository(Article);
   public async createRoom() {
+    const server = getCollabServer();
+    if (!server) {
+      throw new Error("协同服务未启用");
+    }
     return server.createRoom();
   }
 
