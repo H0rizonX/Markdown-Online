@@ -1,33 +1,40 @@
+# ---------- 依赖安装阶段 ----------
 FROM node:20-alpine AS deps
 
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+ENV PNPM_HOME="/pnpm" \
+    PATH="$PNPM_HOME:$PATH" \
+    NPM_CONFIG_UNSAFE_PERM=true
+
+RUN corepack enable && pnpm config set unsafe-perm true
 
 WORKDIR /repo
 
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-COPY apps/markdown2html/package.json apps/markdown2html/
+# 复制 workspace 配置
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/markdown2html/package.json ./apps/markdown2html/
 
-RUN pnpm install --frozen-lockfile --filter markdown2html...
+RUN pnpm install --frozen-lockfile
 
+# ---------- 构建阶段 ----------
 FROM deps AS build
-
+WORKDIR /repo
 COPY . .
 
-ARG VITE_API_BASE_URL=/api
-ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
-
+# 构建前端项目
 RUN pnpm --filter markdown2html build
 
-FROM nginx:1.27-alpine AS runner
+# ---------- 运行阶段 ----------
+FROM nginx:alpine AS runner
 
-COPY apps/markdown2html/nginx.conf /etc/nginx/conf.d/default.conf
+# 删除默认静态目录
+RUN rm -rf /usr/share/nginx/html/*
+
+# 复制构建产物
 COPY --from=build /repo/apps/markdown2html/dist /usr/share/nginx/html
 
-EXPOSE 80
+# 可选 nginx 配置
+# COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget -q -O - http://localhost/ || exit 1
+EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
