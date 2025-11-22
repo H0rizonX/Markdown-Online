@@ -15,6 +15,7 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS build
 COPY . .
 RUN pnpm install --frozen-lockfile
+RUN pnpm --filter apps/markdown2html-server run build   # ✅ 关键：生成 dist
 
 FROM node:20-alpine AS runner
 ENV NODE_ENV=production
