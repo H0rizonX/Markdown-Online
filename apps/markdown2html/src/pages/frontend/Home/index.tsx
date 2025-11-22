@@ -12,6 +12,7 @@ import useUserStore from "../../../stores/user";
 import type { FileItem } from "./interface";
 import { Blinds, Share2, User, Users } from "lucide-react";
 import MenuItem from "antd/es/menu/MenuItem";
+import NoticeModal from "./components/Alert";
 type MenuItem = Required<MenuProps>["items"][number];
 export type TabItem = {
   key: string;
@@ -34,6 +35,8 @@ const tabItems: TabItem[] = [
 const HomePage: FC = () => {
   const [currentTab, setCurrentTab] = useState<TabItem>(tabItems[0]);
   const [isModalVisible, setIsModalVisible] = useState(false);
+
+  const [showNotice, setShowNotice] = useState(true);
 
   const closeModal = () => setIsModalVisible(false);
   const [teamRefreshKey, setTeamRefreshKey] = useState(0);
@@ -72,6 +75,7 @@ const HomePage: FC = () => {
   }, [fetchGetDocs]);
   return (
     <div className="h-screen bg-white flex flex-col overflow-auto">
+      <NoticeModal open={showNotice} onClose={() => setShowNotice(false)} />
       <HeaderBar />
       <div className="flex flex-1 overflow-y">
         <aside className="w-56 h-full">
