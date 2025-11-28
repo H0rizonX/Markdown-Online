@@ -364,16 +364,23 @@ const TeamLists: React.FC<TeamListsProps> = ({
           <Button key="close" onClick={() => setInviteModal({ open: false })}>
             关闭
           </Button>,
-          <Button
-            key="copy"
-            type="primary"
-            onClick={() => {
-              if (inviteModal.link) {
-                navigator.clipboard.writeText(inviteModal.link);
-                msgBox.success("已复制到剪贴板");
-              }
-            }}
-          >
+        <Button
+          key="copy"
+          type="primary"
+          onClick={() => {
+            if (!inviteModal.link) {
+              return;
+            }
+            if (!navigator?.clipboard?.writeText) {
+              msgBox.warning("当前浏览器不支持一键复制，请手动复制链接");
+              return;
+            }
+            navigator.clipboard
+              .writeText(inviteModal.link)
+              .then(() => msgBox.success("已复制到剪贴板"))
+              .catch(() => msgBox.warning("复制失败，请手动复制"));
+          }}
+        >
             复制链接
           </Button>,
         ]}

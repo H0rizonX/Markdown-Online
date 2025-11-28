@@ -31,7 +31,8 @@ app.use(express.urlencoded({ extended: false }));
 // CORS
 const corsOptions: CorsOptions = env.cors.allowAll
   ? {
-      origin: "*",
+      origin: true, // mirror request origin so credentials work
+      credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     }
   : {

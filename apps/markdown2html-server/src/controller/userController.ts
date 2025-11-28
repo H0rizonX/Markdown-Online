@@ -15,6 +15,67 @@ import multer from "multer";
 const router = express.Router();
 const userService = new UserService();
 
+const normalizeEmail = (email?: string) =>
+  typeof email === "string" ? email.trim().toLowerCase() : "";
+
+type CacheEntry = {
+  value: string;
+  expireAt?: number;
+};
+
+const fallbackCache = new Map<string, CacheEntry>();
+
+const isExpired = (entry: CacheEntry) =>
+  typeof entry.expireAt === "number" && entry.expireAt <= Date.now();
+
+const getFromFallback = (key: string) => {
+  const entry = fallbackCache.get(key);
+  if (!entry) return null;
+  if (isExpired(entry)) {
+    fallbackCache.delete(key);
+    return null;
+  }
+  return entry.value;
+};
+
+const setInFallback = (key: string, value: string, ttlSeconds?: number) => {
+  const record: CacheEntry = { value };
+  if (ttlSeconds && ttlSeconds > 0) {
+    record.expireAt = Date.now() + ttlSeconds * 1000;
+  }
+  fallbackCache.set(key, record);
+};
+
+const safeGet = async (key: string) => {
+  try {
+    const value = await redis.get(key);
+    if (value !== null) return value;
+  } catch (error) {
+    console.warn(`[Redis] get ${key} failed, fallback to memory`, error);
+  }
+  return getFromFallback(key);
+};
+
+const safeSet = async (key: string, value: string | number, ttlSeconds?: number) => {
+  const normalized = String(value);
+  if (ttlSeconds && ttlSeconds > 0) {
+    try {
+      await redis.set(key, normalized, "EX", ttlSeconds);
+      return;
+    } catch (error) {
+      console.warn(`[Redis] set ${key} failed, fallback to memory`, error);
+    }
+    setInFallback(key, normalized, ttlSeconds);
+    return;
+  }
+  try {
+    await redis.set(key, normalized);
+  } catch (error) {
+    console.warn(`[Redis] set ${key} failed, fallback to memory`, error);
+    setInFallback(key, normalized);
+  }
+};
+
 const upload = multer({ dest: "uploads/" });
 
 const getUserInfo = async (token) => {
@@ -75,10 +136,11 @@ router.post(
   expressJoi(userCreateSchema),
   async (req: Request, res: Response) => {
     const data = { ...req.body };
+    data.email = normalizeEmail(data.email);
 
     const dbUser = await userService.getUser(data.email);
     const codeKey = `email:code:${data.code}`;
-    const emailFromRedis = await redis.get(codeKey);
+    const emailFromRedis = await safeGet(codeKey);
 
     if (!emailFromRedis) {
       return res.fail("验证码已过期或无效");
@@ -106,9 +168,19 @@ router.post(
     const saltRounds = 10;
     data.password = await bcrypt.hash(data.password, saltRounds);
 
-    const user = await userService.create(data);
-    delete user.password;
-    res.suc(user);
+    try {
+      const user = await userService.create(data);
+      delete user.password;
+      res.suc(user);
+    } catch (error) {
+      const driverCode = (error as { code?: string; errno?: number }).code;
+      const errno = (error as { errno?: number }).errno;
+      if (driverCode === "ER_DUP_ENTRY" || errno === 1062) {
+        return res.fail("该邮箱已注册，请勿重复！");
+      }
+      console.error("注册失败:", error);
+      return res.fail("注册失败，请稍后重试");
+    }
   }
 );
 
@@ -128,11 +200,14 @@ router.post("/update/:id", async (req: Request, res: Response) => {
 
 // 邮件发送
 router.post("/send-email", async (req: Request, res: Response) => {
-  const fromEmail = req.body.email;
+  const fromEmail = normalizeEmail(req.body.email);
+  if (!fromEmail) {
+    return res.fail("请输入有效的邮箱地址");
+  }
   const code = Math.floor(Math.random() * 900000) + 100000;
   const limitKey = `email:limit:${fromEmail}`;
   const codeKey = `email:code:${code}`;
-  const isLimited = await redis.get(limitKey);
+  const isLimited = await safeGet(limitKey);
 
   if (isLimited) {
     return res.fail("请求过于频繁，请稍后再试");
@@ -143,13 +218,39 @@ router.post("/send-email", async (req: Request, res: Response) => {
   }
 
   try {
-    await mailer.sendMail(getMailOptions(fromEmail, code));
-    res.suc(null, 200, "验证码发送成功", 0);
-    await redis.set(fromEmail, code, "EX", 300); // 5分钟过期
-    await redis.set(limitKey, "1", "EX", 60); // 60秒限制
-    await redis.set(codeKey, fromEmail, "EX", 300); // 保存验证码与邮箱的绑定
+    let emailSent = false;
+
+    try {
+      if (!mailer) {
+        throw new Error("邮件服务未启用，请联系管理员");
+      }
+      await mailer.sendMail(getMailOptions(fromEmail, code));
+      emailSent = true;
+    } catch (error) {
+      console.error("发送邮件出错:", error);
+      if (env.nodeEnv === "production") {
+        return res.status(500).json({ message: "邮件发送失败", error });
+      }
+      console.warn("邮件服务不可用，开发环境将直接返回验证码");
+    }
+
+    await safeSet(fromEmail, code, 300); // 5分钟过期
+    await safeSet(limitKey, "1", 60); // 60秒限制
+    await safeSet(codeKey, fromEmail, 300); // 保存验证码与邮箱的绑定
+
+    if (!mailer || !emailSent) {
+      console.info(`当前验证码（开发模式）：${code}，邮箱：${fromEmail}`);
+    }
+
+    const payload =
+      env.nodeEnv === "production" ? null : { code, email: fromEmail };
+    const message = emailSent
+      ? "验证码发送成功"
+      : "验证码已生成（开发模式）";
+
+    res.suc(payload, 200, message, 0);
   } catch (error) {
-    console.error("发送邮件出错:", error);
+    console.error("发送验证码流程异常:", error);
     res.status(500).json({ message: "邮件发送失败", error });
   }
 });
@@ -158,7 +259,7 @@ router.post("/send-email", async (req: Request, res: Response) => {
 router.post("/reset-password", async (req: Request, res: Response) => {
   const data = { ...req.body };
   const codeKey = `email:code:${data.code}`;
-  const emailFromRedis = await redis.get(codeKey);
+  const emailFromRedis = await safeGet(codeKey);
 
   if (!emailFromRedis) {
     return res.fail("验证码已过期或无效");

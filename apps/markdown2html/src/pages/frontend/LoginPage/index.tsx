@@ -99,10 +99,14 @@ const LoginPage = () => {
           msgBox.warning(res.message);
         }
       } else {
-        await Register(values as registerType);
-        setIsLogin(true);
-        msgBox.success("注册成功");
-        form.resetFields();
+        const res = await Register(values as registerType);
+        if (res.status === 0) {
+          setIsLogin(true);
+          msgBox.success("注册成功");
+          form.resetFields();
+        } else {
+          msgBox.warning(res.message || "注册失败");
+        }
       }
     } catch (error) {
       msgBox.error(isLogin ? "登录失败" : "注册失败");
