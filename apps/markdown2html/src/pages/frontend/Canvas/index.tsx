@@ -7,8 +7,10 @@ import type { CanvasProps } from "./interface";
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
 
-// 配置：默认连接 ws://<host>:3004，房间 demo（可用 window.VITE_YJS_WS_SERVER 覆盖）
-const DEFAULT_SERVER = `${location.protocol === "https:" ? "wss" : "ws"}://${location.hostname}:3004`;
+const isDev = import.meta.env.MODE === "development";
+const DEFAULT_SERVER = isDev
+  ? "ws://localhost:3004"
+  : "wss://md.hor1z0n.cn/yjs-ws/";
 const win = window as unknown as {
   VITE_YJS_WS_SERVER?: string;
   VITE_YJS_WS_ROOM?: string;
@@ -59,7 +61,7 @@ export const Canvas: FC<CanvasProps> = ({ file, onClose, onSelectDoc }) => {
     }
 
     return { ydoc: doc, provider: wsProvider, awareness: wsProvider.awareness };
-  }, [ROOM]);
+  }, [ROOM, SERVER]);
 
   // 组件挂载时连接，卸载时断开
   useEffect(() => {

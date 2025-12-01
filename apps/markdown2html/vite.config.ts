@@ -20,6 +20,24 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
+      // 新增：把 crypto 映射到 crypto-browserify
+      crypto: "crypto-browserify",
+    },
+  },
+  // 新增：esbuild 注入全局 crypto
+  optimizeDeps: {
+    esbuildOptions: {
+      define: {
+        global: "globalThis", // 解决全局对象问题
+      },
+    },
+  },
+  build: {
+    target: "es2020",
+    // 新增：打包时注入 crypto
+    rollupOptions: {
+      external: [],
+      plugins: [],
     },
   },
 });

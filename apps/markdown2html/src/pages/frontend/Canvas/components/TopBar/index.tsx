@@ -111,7 +111,15 @@ const TopBar: FC<componentProps> = ({ isExpended, file, ydoc, awareness }) => {
 
     const updateOnlineUsers = () => {
       const states = awareness.getStates();
-      setOnlineUsersCount(states.size);
+      const uniqueIds = new Set<number>();
+      states.forEach((state) => {
+        const userId = state?.user?.userId;
+        if (typeof userId === "number") {
+          uniqueIds.add(userId);
+        }
+      });
+      const fallbackCount = states.size;
+      setOnlineUsersCount(uniqueIds.size > 0 ? uniqueIds.size : fallbackCount);
     };
 
     awareness.on("change", updateOnlineUsers);

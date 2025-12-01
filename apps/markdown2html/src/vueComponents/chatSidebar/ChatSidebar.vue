@@ -2,6 +2,37 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 const props = defineProps<{ room?: string }>()
+const isDev = import.meta.env.MODE === 'development'
+
+const getAuthToken = () => {
+  try {
+    return localStorage.getItem('token') || ''
+  } catch {
+    return ''
+  }
+}
+
+const resolveChatWsBaseUrl = () => {
+  if (typeof window !== 'undefined' && (window as any).VITE_WS_URL) {
+    return (window as any).VITE_WS_URL as string
+  }
+  return isDev ? 'ws://localhost:3001' : 'wss://md.hor1z0n.cn/chat-ws/'
+}
+
+const buildChatWsUrl = () => {
+  const base = resolveChatWsBaseUrl()
+  if (isDev) return base
+  const token = getAuthToken()
+  if (!token) return base
+  try {
+    const url = new URL(base)
+    url.searchParams.set('token', token)
+    return url.toString()
+  } catch {
+    const glue = base.includes('?') ? '&' : '?'
+    return `${base}${glue}token=${encodeURIComponent(token)}`
+  }
+}
 
 type ChatMessage = {
   id: string
@@ -375,11 +406,7 @@ const connect = () => {
   onlineUserIds.value = new Set([currentUserId])
   
   connecting.value = true
-  // 优先使用 window.VITE_WS_URL（由 index.html 注入 .env 值），最后回退到同主机 3001
-  const envWsUrl = (window && (window as any).VITE_WS_URL)
-  const defaultWs = (location.protocol === 'https:' ? 'wss://' : 'ws://') + (location.hostname + ':3001')
-  const url = envWsUrl || defaultWs
-  const socket = new WebSocket(url)
+  const socket = new WebSocket(buildChatWsUrl())
   ws.value = socket
 
   socket.addEventListener('open', () => {

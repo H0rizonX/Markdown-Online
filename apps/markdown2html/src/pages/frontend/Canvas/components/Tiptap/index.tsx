@@ -152,6 +152,7 @@ interface EditingUser {
   avatar?: string;
   lastEditTime: number;
   position?: { top: number; left: number };
+  isSelf?: boolean;
 }
 
 // 创建 lowlight 实例用于代码高亮，并注册常用语言
@@ -296,79 +297,84 @@ const Tiptap: FC<componentProps> = (props) => {
     // 监听 awareness 变化（在线用户变化和编辑状态）
     const updateOnlineUsers = () => {
       const states = awareness.getStates();
-      const users: OnlineUser[] = [];
-      const editing: EditingUser[] = [];
+      const userMap = new Map<number | string, OnlineUser>();
+      const editingCandidates: EditingUser[] = [];
       const currentClientId = (awareness as unknown as { clientID?: number })
         .clientID;
 
       states.forEach((state, clientId) => {
-        if (state.user) {
-          const clientIdNum = Number(clientId);
-          const userInfo = {
-            clientId: clientIdNum,
-            name: state.user.name || "未知用户",
-            color: state.user.color || "#958DF1",
-            userId: state.user.userId,
-            avatar: state.user.avatar,
-          };
+        if (!state.user) return;
+        const clientIdNum = Number(clientId);
+        const isSelf = clientIdNum === currentClientId;
+        const userInfo: OnlineUser = {
+          clientId: clientIdNum,
+          name: state.user.name || "未知用户",
+          color: state.user.color || "#958DF1",
+          userId: state.user.userId,
+          avatar: state.user.avatar,
+        };
+        const dedupeKey =
+          typeof userInfo.userId === "number"
+            ? userInfo.userId
+            : `client-${clientIdNum}`;
+        const existing = userMap.get(dedupeKey);
+        if (!existing || isSelf) {
+          userMap.set(dedupeKey, userInfo);
+        }
 
-          users.push(userInfo);
-
-          // 检查是否正在编辑（排除当前用户）
-          const isEditing = state.isEditing === true;
-          if (isEditing && clientIdNum !== currentClientId) {
-            // 清除之前的超时
+        const isEditing = state.isEditing === true;
+        if (isEditing) {
+          if (!isSelf) {
             const existingTimeout = editingTimeoutRef.current.get(clientIdNum);
             if (existingTimeout) {
               clearTimeout(existingTimeout);
             }
+          }
 
-            // 获取光标位置（如果有）
-            let position: { top: number; left: number } | undefined;
-            if (editor && editor.view && state.selection) {
-              try {
-                // 尝试从 awareness 获取 selection 信息
-                const selection = state.selection as {
-                  anchor?: number;
-                  head?: number;
-                };
-                if (selection.anchor !== undefined) {
-                  const coords = editor.view.coordsAtPos(selection.anchor);
-                  if (coords) {
-                    const containerRect =
-                      editorContainerRef.current?.getBoundingClientRect();
-                    if (containerRect) {
-                      position = {
-                        top: coords.top - containerRect.top + 20, // 在光标下方显示
-                        left: coords.left - containerRect.left,
-                      };
-                    }
+          let position: { top: number; left: number } | undefined;
+          if (!isSelf && editor && editor.view && state.selection) {
+            try {
+              const selection = state.selection as {
+                anchor?: number;
+                head?: number;
+              };
+              if (selection.anchor !== undefined) {
+                const coords = editor.view.coordsAtPos(selection.anchor);
+                if (coords) {
+                  const containerRect =
+                    editorContainerRef.current?.getBoundingClientRect();
+                  if (containerRect) {
+                    position = {
+                      top: coords.top - containerRect.top + 20, // 在光标下方显示
+                      left: coords.left - containerRect.left,
+                    };
                   }
                 }
-              } catch {
-                // 如果获取位置失败，忽略
               }
+            } catch {
+              // 如果获取位置失败，忽略
             }
+          }
 
-            editing.push({
-              ...userInfo,
-              lastEditTime: Date.now(),
-              position,
-            });
+          editingCandidates.push({
+            ...userInfo,
+            lastEditTime: Date.now(),
+            position,
+            isSelf,
+          });
 
-            // 调试日志
-            if (process.env.NODE_ENV === "development") {
-              console.log(
-                "[Tiptap] 检测到用户正在编辑:",
-                userInfo.name,
-                "clientId:",
-                clientIdNum,
-                "position:",
-                position
-              );
-            }
+          if (process.env.NODE_ENV === "development") {
+            console.log(
+              "[Tiptap] 检测到用户正在编辑:",
+              userInfo.name,
+              "clientId:",
+              clientIdNum,
+              "position:",
+              position
+            );
+          }
 
-            // 设置超时，3秒后自动移除编辑状态
+          if (!isSelf) {
             const timeout = setTimeout(() => {
               setEditingUsers((prev) =>
                 prev.filter((u) => u.clientId !== clientIdNum)
@@ -377,18 +383,17 @@ const Tiptap: FC<componentProps> = (props) => {
             }, 3000);
 
             editingTimeoutRef.current.set(clientIdNum, timeout);
-          } else if (!isEditing && clientIdNum !== currentClientId) {
-            // 如果用户停止编辑，清除超时并立即移除
-            const existingTimeout = editingTimeoutRef.current.get(clientIdNum);
-            if (existingTimeout) {
-              clearTimeout(existingTimeout);
-              editingTimeoutRef.current.delete(clientIdNum);
-            }
+          }
+        } else if (!isSelf) {
+          const existingTimeout = editingTimeoutRef.current.get(clientIdNum);
+          if (existingTimeout) {
+            clearTimeout(existingTimeout);
+            editingTimeoutRef.current.delete(clientIdNum);
           }
         }
       });
 
-      setOnlineUsers(users);
+      setOnlineUsers(Array.from(userMap.values()));
 
       // 更新编辑用户列表
       setEditingUsers((prev) => {
@@ -397,11 +402,11 @@ const Tiptap: FC<componentProps> = (props) => {
           const state = Array.from(states.entries()).find(
             ([id]) => Number(id) === u.clientId
           )?.[1];
-          return state?.isEditing === true && u.clientId !== currentClientId;
+          return state?.isEditing === true;
         });
 
         // 添加新的编辑用户
-        const newEditing = editing.filter(
+        const newEditing = editingCandidates.filter(
           (e) => !stillEditing.some((s) => s.clientId === e.clientId)
         );
 
@@ -924,7 +929,7 @@ const Tiptap: FC<componentProps> = (props) => {
           <div className="flex items-center gap-1">
             {onlineUsers.map((user) => (
               <Badge
-                key={user.clientId}
+                key={user.userId ?? user.clientId}
                 color={user.color}
                 dot
                 title={user.name}
@@ -1311,8 +1316,9 @@ const Tiptap: FC<componentProps> = (props) => {
 
           {/* 正在编辑的浮动标识 - 显示在光标位置 */}
           {editingUsers.length > 0 &&
-            editingUsers.map((user) =>
-              user.position ? (
+            editingUsers.map((user) => {
+              if (user.isSelf || !user.position) return null;
+              return (
                 <div
                   key={user.clientId}
                   className="editing-indicator pointer-events-none absolute z-[9999]"
@@ -1367,8 +1373,8 @@ const Tiptap: FC<componentProps> = (props) => {
                     </div>
                   </div>
                 </div>
-              ) : null
-            )}
+              );
+            })}
         </div>
       </div>
 
