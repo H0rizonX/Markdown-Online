@@ -52,8 +52,8 @@ router.get("/:teamId/invite", async (req: Request, res: Response) => {
     // 将 token 和 teamId 绑定到 Redis 1天过期
     await redis.set(`team_invite:${token}`, teamId, "EX", 60 * 60 * 24);
 
-    // 返回完整邀请链接
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3002";
+    // 返回完整邀请链接（优先使用环境变量，默认指向线上域名）
+    const frontendUrl = process.env.FRONTEND_URL || "https://md.hor1z0n.cn";
     const inviteLink = `${frontendUrl}/join?token=${token}`;
 
     return res.suc(inviteLink);

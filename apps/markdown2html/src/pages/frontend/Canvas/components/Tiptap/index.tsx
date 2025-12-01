@@ -911,15 +911,10 @@ const Tiptap: FC<componentProps> = (props) => {
           </span>
           <span className="text-gray-400">|</span>
           <span>当前用户：{userRef.current.name}</span>
-          {/* 临时调试信息 */}
-          {process.env.NODE_ENV === "development" && (
-            <>
-              <span className="text-gray-400">|</span>
-              <span className="text-xs text-gray-400">
-                编辑中: {editingUsers.length}
-              </span>
-            </>
-          )}
+          <span className="text-gray-400">|</span>
+          <span className="text-xs text-gray-400">
+            编辑中: {editingUsers.length}
+          </span>
         </div>
 
         {/* 在线用户列表 */}
