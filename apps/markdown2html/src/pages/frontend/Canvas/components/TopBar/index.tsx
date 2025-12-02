@@ -58,14 +58,17 @@ const TopBar: FC<componentProps> = ({ isExpended, file, ydoc, awareness }) => {
         inputRef.current.value = currentTitle;
       }
     } else if (file?.title) {
-      // 如果 Yjs 中没有标题，且当前标题为空，才初始化
-      const inputValue = inputRef.current?.value || "";
-      if (!inputValue && file.title) {
-        ytext.insert(0, file.title);
-        setTitle(file.title);
-        if (inputRef.current) {
-          inputRef.current.value = file.title;
-        }
+      // 如果 Yjs 中没有标题，则使用当前文件标题进行初始化
+      ytext.insert(0, file.title);
+      setTitle(file.title);
+      if (inputRef.current) {
+        inputRef.current.value = file.title;
+      }
+    } else {
+      // 两者都没有时清空
+      setTitle("");
+      if (inputRef.current) {
+        inputRef.current.value = "";
       }
     }
 

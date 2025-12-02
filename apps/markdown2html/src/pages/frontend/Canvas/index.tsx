@@ -20,17 +20,16 @@ const SERVER = win.VITE_YJS_WS_SERVER || DEFAULT_SERVER;
 
 export const Canvas: FC<CanvasProps> = ({ file, onClose, onSelectDoc }) => {
   const [isExpended, setIsExpended] = useState(false);
-
-  const [currentFile, setCurrentFile] = useState(file);
   const [headings, setHeadings] = useState<HeadingItem[]>([]);
   const [editor, setEditor] = useState<Editor | null>(null);
 
-  useEffect(() => {
-    setCurrentFile(file);
-  }, [file]);
-
   // 使用文件 path 作为房间名，确保每个文档有独立的协同空间
-  const ROOM = String(currentFile?.id) || "default";
+  const ROOM = useMemo(() => {
+    if (file?.id !== undefined && file?.id !== null) {
+      return String(file.id);
+    }
+    return "default";
+  }, [file?.id]);
   // 创建共享的 Yjs 文档和 WebSocket Provider（供标题和内容使用）
   const { ydoc, provider, awareness } = useMemo(() => {
     // 使用文件 path 作为全局 key，确保每个文档有独立的 Provider 和 Doc
