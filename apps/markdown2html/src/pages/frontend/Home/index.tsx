@@ -15,6 +15,7 @@ import MenuItem from "antd/es/menu/MenuItem";
 import NoticeModal from "./components/Alert";
 import { useDeviceDetect } from "../../../hooks";
 import DeviceDetect from "./components/OtherDevice";
+import BugFeedbackButton from "./components/bugFeedBack";
 type MenuItem = Required<MenuProps>["items"][number];
 export type TabItem = {
   key: string;
@@ -139,6 +140,7 @@ const HomePage: FC = () => {
         )}
       </Modal>
       <JoinTeamModal />
+      <BugFeedbackButton />
     </div>
   );
 };
