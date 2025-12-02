@@ -1,67 +1,77 @@
 import { DownOutlined } from "@ant-design/icons";
-import { Tree, type TreeDataNode, type TreeProps } from "antd";
+import { Empty, Tree, type TreeDataNode, type TreeProps } from "antd";
 import type { FC } from "react";
+import type { HeadingItem } from "../../interface";
 
-const Sidebar: FC = () => {
-  const treeData: TreeDataNode[] = [
-    {
-      title: "文档中心",
-      key: "docs",
-      children: [
-        {
-          title: "产品文档",
-          key: "docs-product",
-          children: [
-            { title: "用户指南", key: "docs-product-user" },
-            { title: "开发手册", key: "docs-product-dev" },
-            { title: "API 参考", key: "docs-product-api" },
-          ],
-        },
-        {
-          title: "运维手册",
-          key: "docs-ops",
-          children: [
-            { title: "部署指南", key: "docs-ops-deploy" },
-            { title: "监控与告警", key: "docs-ops-monitor" },
-          ],
-        },
-      ],
-    },
-    {
-      title: "项目配置",
-      key: "project",
-      children: [
-        { title: "项目设置", key: "project-setting" },
-        { title: "团队管理", key: "project-team" },
-        { title: "权限控制", key: "project-auth" },
-      ],
-    },
-    {
-      title: "归档文件",
-      key: "archive",
-      children: [
-        { title: "历史版本", key: "archive-history" },
-        { title: "废弃文档", key: "archive-deprecated" },
-      ],
-    },
-  ];
+interface SidebarProps {
+  headings: HeadingItem[];
+  onSelectHeading?: (heading: HeadingItem) => void;
+}
 
-  const onSelect: TreeProps["onSelect"] = (selectedKeys, info) => {
-    console.log("selected", selectedKeys, info);
+// 将线性标题列表构造成层级树结构（根据 heading level）
+function buildTreeFromHeadings(headings: HeadingItem[]): TreeDataNode[] {
+  if (!headings.length) return [];
+
+  const root: TreeDataNode[] = [];
+  const stack: { level: number; node: TreeDataNode }[] = [];
+
+  headings.forEach((h) => {
+    const treeNode: TreeDataNode = {
+      title: h.text,
+      key: h.id,
+      // 用于后续 onSelect 时快速找到 heading
+      children: [],
+    };
+
+    // 找到最近的比当前 level 小的父节点
+    while (stack.length && stack[stack.length - 1].level >= h.level) {
+      stack.pop();
+    }
+
+    if (stack.length === 0) {
+      root.push(treeNode);
+    } else {
+      const parent = stack[stack.length - 1].node;
+      if (!parent.children) parent.children = [];
+      parent.children.push(treeNode);
+    }
+
+    stack.push({ level: h.level, node: treeNode });
+  });
+
+  return root;
+}
+
+const Sidebar: FC<SidebarProps> = ({ headings, onSelectHeading }) => {
+  const treeData = buildTreeFromHeadings(headings);
+
+  const onSelect: TreeProps["onSelect"] = (selectedKeys) => {
+    if (!onSelectHeading || !selectedKeys.length) return;
+    const key = selectedKeys[0];
+    const heading = headings.find((h) => h.id === key);
+    if (heading) {
+      onSelectHeading(heading);
+    }
   };
 
   return (
     <div className="h-full w-full p-4 flex flex-col bg-white">
+      <div className="mb-2 text-sm font-medium text-gray-500">文档目录</div>
       <div className="flex-grow overflow-y-auto">
-        <Tree
-          showLine
-          switcherIcon={<DownOutlined />}
-          defaultExpandedKeys={["docs", "project"]}
-          onSelect={onSelect}
-          treeData={treeData}
-          className="h-full max-h-full"
-          defaultExpandAll
-        />
+        {treeData.length === 0 ? (
+          <div className="h-full flex items-center justify-center">
+            <Empty description="暂无标题，开始在编辑器中使用 H1/H2/H3 吧～" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          </div>
+        ) : (
+          <Tree
+            showLine
+            switcherIcon={<DownOutlined />}
+            defaultExpandAll
+            onSelect={onSelect}
+            treeData={treeData}
+            className="h-full max-h-full text-sm"
+          />
+        )}
       </div>
     </div>
   );

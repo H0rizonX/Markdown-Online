@@ -3,7 +3,8 @@ import Tiptap from "./components/Tiptap";
 import Menu from "./components/Menu";
 import TopBar from "./components/TopBar";
 import Sidebar from "./components/Sidebar";
-import type { CanvasProps } from "./interface";
+import type { CanvasProps, HeadingItem } from "./interface";
+import type { Editor } from "@tiptap/core";
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
 
@@ -21,6 +22,8 @@ export const Canvas: FC<CanvasProps> = ({ file, onClose, onSelectDoc }) => {
   const [isExpended, setIsExpended] = useState(false);
 
   const [currentFile, setCurrentFile] = useState(file);
+  const [headings, setHeadings] = useState<HeadingItem[]>([]);
+  const [editor, setEditor] = useState<Editor | null>(null);
 
   useEffect(() => {
     setCurrentFile(file);
@@ -115,10 +118,27 @@ export const Canvas: FC<CanvasProps> = ({ file, onClose, onSelectDoc }) => {
             ydoc={ydoc}
             provider={provider}
             awareness={awareness}
+            onHeadingsChange={setHeadings}
+            onEditorReady={setEditor}
           />
         </div>
         <div className="w-64 h-full absolute right-0 top-0 border-l bg-white shadow-md overflow-hidden">
-          <Sidebar />
+          <Sidebar
+            headings={headings}
+            onSelectHeading={(heading) => {
+              if (!editor || !heading) return;
+              try {
+                editor
+                  .chain()
+                  .focus()
+                  // 将光标跳转到对应标题位置
+                  .setTextSelection(heading.pos)
+                  .run();
+              } catch (e) {
+                console.error("[Canvas] 跳转标题失败:", e);
+              }
+            }}
+          />
         </div>
       </div>
       {/* 挂载自定义元素（Vue Web Component），组件自身会贴边并可折叠 */}

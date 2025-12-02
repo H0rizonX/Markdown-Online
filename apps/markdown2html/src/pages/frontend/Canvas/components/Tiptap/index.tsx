@@ -1,6 +1,7 @@
 import "./index.scss";
 import { useEffect, useMemo, useRef, useState, type FC } from "react";
-import type { componentProps } from "../../interface.ts";
+import type { Editor } from "@tiptap/core";
+import type { componentProps, HeadingItem } from "../../interface.ts";
 import { message, Button, Avatar, Badge, Input, Modal, Dropdown } from "antd";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -177,6 +178,8 @@ const Tiptap: FC<componentProps> = (props) => {
     ydoc: externalYdoc,
     provider: externalProvider,
     awareness: externalAwareness,
+    onHeadingsChange,
+    onEditorReady,
   } = props;
   const [messageApi, contextHolder] = message.useMessage();
   const [isSaving, setIsSaving] = useState(false);
@@ -280,6 +283,61 @@ const Tiptap: FC<componentProps> = (props) => {
       },
     },
   });
+
+  // 将 editor 实例暴露给父组件（用于侧边栏跳转）
+  useEffect(() => {
+    if (!onEditorReady) return;
+    onEditorReady(editor as Editor | null);
+    return () => {
+      onEditorReady(null);
+    };
+  }, [editor, onEditorReady]);
+
+  // 从文档中抽取标题，并通过回调传递给父组件
+  useEffect(() => {
+    if (!editor || !onHeadingsChange) return;
+
+    const extractHeadings = (): HeadingItem[] => {
+      const headings: HeadingItem[] = [];
+      const doc = editor.state.doc;
+
+      doc.descendants((node, pos) => {
+        if (node.type.name === "heading") {
+          const level = (node.attrs.level ?? 1) as number;
+          const text = node.textContent || "未命名标题";
+          headings.push({
+            id: `${level}-${pos}`,
+            text,
+            level,
+            pos,
+          });
+        }
+        return true;
+      });
+
+      return headings;
+    };
+
+    const handleUpdate = () => {
+      try {
+        const hs = extractHeadings();
+        onHeadingsChange(hs);
+      } catch (e) {
+        console.error("[Tiptap] 提取标题失败:", e);
+      }
+    };
+
+    // 初次同步一次
+    handleUpdate();
+
+    editor.on("update", handleUpdate);
+    editor.on("create", handleUpdate);
+
+    return () => {
+      editor.off("update", handleUpdate);
+      editor.off("create", handleUpdate);
+    };
+  }, [editor, onHeadingsChange]);
 
   // 设置用户 awareness 信息并追踪编辑状态
   useEffect(() => {
