@@ -1,7 +1,7 @@
 import { UserOutlined } from "@ant-design/icons";
 import {
   Avatar,
-  Badge,
+  // Badge,
   Button,
   Dropdown,
   Space,
@@ -96,13 +96,13 @@ const HeaderBar: FC = () => {
             <span className="text-sm text-gray-600">{userInfo.name}</span>
           )}
           <Dropdown menu={{ items }}>
-            <Badge dot>
-              <Avatar
-                src={userInfo?.avatar}
-                icon={!userInfo?.avatar && <UserOutlined />}
-                style={{ cursor: "pointer" }}
-              />
-            </Badge>
+            {/* <Badge dot> */}
+            <Avatar
+              src={userInfo?.avatar}
+              icon={!userInfo?.avatar && <UserOutlined />}
+              style={{ cursor: "pointer" }}
+            />
+            {/* </Badge> */}
           </Dropdown>
         </Space>
       </div>
