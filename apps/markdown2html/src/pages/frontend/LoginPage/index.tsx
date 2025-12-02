@@ -75,12 +75,47 @@ const LoginPage = () => {
     return () => clearTimeout(timer);
   }, [resetCountdown]);
 
+  // 检查email格式
+  const isValidEmail = (input: string | number): boolean => {
+    if (typeof input === "number") return false;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.trim());
+  };
+
   // === 登录注册提交 ===
   const handleFinish = async (values: AuthValues) => {
     setLoading(true);
     try {
       if (isLogin) {
-        const res = await Login(values as LoginType);
+        const { identify, password } = values;
+        const isEmail = isValidEmail(identify!);
+        let res;
+        if (isEmail) {
+          // 邮箱登录：直接使用原始值
+          res = await Login({
+            identify: identify!,
+            password,
+          } as LoginType);
+        } else {
+          // ID登录：确保identify是number类型
+          let identifyValue: string | number;
+
+          if (typeof identify === "number") {
+            // 如果已经是number，直接使用
+            identifyValue = identify;
+          } else if (typeof identify === "string") {
+            // 如果是string且不是邮箱，转换为number
+            identifyValue = Number(identify);
+          } else {
+            // 其他情况处理
+            throw new Error("无效的登录账号");
+          }
+
+          res = await Login({
+            identify: identifyValue,
+            password,
+          } as LoginType);
+        }
+
         if (res.status === 0) {
           // 存储 token 和用户信息
           const loginData = res.data as dataType;

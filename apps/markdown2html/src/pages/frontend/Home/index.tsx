@@ -13,6 +13,8 @@ import type { FileItem } from "./interface";
 import { Blinds, Share2, User, Users } from "lucide-react";
 import MenuItem from "antd/es/menu/MenuItem";
 import NoticeModal from "./components/Alert";
+import { useDeviceDetect } from "../../../hooks";
+import DeviceDetect from "./components/OtherDevice";
 type MenuItem = Required<MenuProps>["items"][number];
 export type TabItem = {
   key: string;
@@ -42,6 +44,9 @@ const HomePage: FC = () => {
   const [teamRefreshKey, setTeamRefreshKey] = useState(0);
   const [documentLists, setDocumentLists] = useState<FileItem[]>([]);
   const { userInfo } = useUserStore();
+
+  // 判断是否移动端
+  const { isDesktop } = useDeviceDetect();
   const handleTeamCreated = () => {
     closeModal();
     setTeamRefreshKey((prev) => prev + 1); // 触发 TeamLists 刷新
@@ -73,6 +78,10 @@ const HomePage: FC = () => {
   useEffect(() => {
     fetchGetDocs();
   }, [fetchGetDocs]);
+
+  if (!isDesktop) {
+    return <DeviceDetect />;
+  }
   return (
     <div className="h-screen bg-white flex flex-col overflow-auto">
       <NoticeModal open={showNotice} onClose={() => setShowNotice(false)} />

@@ -45,6 +45,7 @@
     "prosemirror-schema-basic": "^1.2.4",
     "prosemirror-state": "^1.4.4",
     "prosemirror-view": "^1.41.3",
+    "qrcode.react": "^4.2.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-router-dom": "^7.6.2",

@@ -81,7 +81,12 @@ const Profile: FC<ProfileProps> = ({ user, onSubmit }) => {
               { type: "email", message: "请输入正确的邮箱地址" },
             ]}
           >
-            <Input prefix={<MailOutlined />} placeholder="邮箱" size="large" />
+            <Input
+              disabled
+              prefix={<MailOutlined />}
+              placeholder="邮箱"
+              size="large"
+            />
           </Form.Item>
 
           <Form.Item label="密码" name="password">
