@@ -23,6 +23,11 @@ export const Canvas: FC<CanvasProps> = ({ file, onClose, onSelectDoc }) => {
   const [headings, setHeadings] = useState<HeadingItem[]>([]);
   const [editor, setEditor] = useState<Editor | null>(null);
 
+  // 当文件切换时，重置headings状态
+  useEffect(() => {
+    setHeadings([]);
+  }, [file?.id]);
+
   // 使用文件 path 作为房间名，确保每个文档有独立的协同空间
   const ROOM = useMemo(() => {
     if (file?.id !== undefined && file?.id !== null) {
@@ -113,6 +118,7 @@ export const Canvas: FC<CanvasProps> = ({ file, onClose, onSelectDoc }) => {
 
         <div className="flex-1 flex items-center justify-center overflow-hidden -ml-64">
           <Tiptap
+            key={file?.id || "default"} // 使用文件ID作为key，确保文件切换时重新创建编辑器
             isExpended={isExpended}
             ydoc={ydoc}
             provider={provider}

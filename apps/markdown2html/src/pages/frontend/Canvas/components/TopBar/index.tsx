@@ -1,28 +1,18 @@
 import { type FC, useRef, useState, useEffect } from "react";
 import type { componentProps } from "../../interface";
 import { BookOpenCheck, Edit, Timer, Users } from "lucide-react";
-import { Tooltip } from "antd";
 import * as Y from "yjs";
 
 const TopBar: FC<componentProps> = ({ isExpended, file, ydoc, awareness }) => {
-  const MAX_LENGTH = 20;
-  const [showTooltip, setShowTooltip] = useState(false);
   const [title, setTitle] = useState(file?.title || "");
   const [onlineUsersCount, setOnlineUsersCount] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const ytextRef = useRef<Y.Text | null>(null);
   const isUpdatingFromYjs = useRef(false); // 防止循环更新
+  const observerRef = useRef<(() => void) | null>(null); // 保存观察器函数引用
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-
-    if (newValue.length > MAX_LENGTH) {
-      e.target.value = title; // 恢复原值
-      showLimitTooltip();
-      return;
-    }
-
     setTitle(newValue);
 
     // 同步到 Yjs（如果不是来自 Yjs 的更新）
@@ -36,15 +26,15 @@ const TopBar: FC<componentProps> = ({ isExpended, file, ydoc, awareness }) => {
     }
   };
 
-  const showLimitTooltip = () => {
-    setShowTooltip(true);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setShowTooltip(false), 2000);
-  };
-
   // 初始化 Yjs 标题同步
   useEffect(() => {
     if (!ydoc) return;
+
+    // 清理旧的观察器
+    if (observerRef.current && ytextRef.current) {
+      ytextRef.current.unobserve(observerRef.current);
+      observerRef.current = null;
+    }
 
     const ytext = ydoc.getText("title");
     ytextRef.current = ytext;
@@ -101,12 +91,17 @@ const TopBar: FC<componentProps> = ({ isExpended, file, ydoc, awareness }) => {
       }
     };
 
+    // 保存观察器函数引用
+    observerRef.current = updateTitle;
     ytext.observe(updateTitle);
 
     return () => {
-      ytext.unobserve(updateTitle);
+      if (observerRef.current && ytextRef.current) {
+        ytextRef.current.unobserve(observerRef.current);
+        observerRef.current = null;
+      }
     };
-  }, [ydoc, file?.title]);
+  }, [ydoc, file?.id]); // 使用 file?.id 而不是 file?.title，确保文件切换时重新初始化
 
   // 监听在线用户数量
   useEffect(() => {
@@ -137,12 +132,6 @@ const TopBar: FC<componentProps> = ({ isExpended, file, ydoc, awareness }) => {
     };
   }, [awareness]);
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
-
   return (
     <div
       className={`
@@ -153,24 +142,18 @@ const TopBar: FC<componentProps> = ({ isExpended, file, ydoc, awareness }) => {
       `}
     >
       <div className="flex flex-col gap-2 relative">
-        <Tooltip
-          title={showTooltip ? "最多输入 20 个字符" : ""}
-          placement="top"
-        >
-          <input
-            ref={inputRef}
-            type="text"
-            value={title}
-            onChange={handleInput}
-            maxLength={MAX_LENGTH}
-            placeholder="请输入标题"
-            className="text-3xl font-bold text-gray-900
-              px-1 rounded border-none outline-none
-              focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50
-              bg-transparent w-full"
-            spellCheck={true}
-          />
-        </Tooltip>
+        <input
+          ref={inputRef}
+          type="text"
+          value={title}
+          onChange={handleInput}
+          placeholder="请输入标题"
+          className="text-3xl font-bold text-gray-900
+            px-1 rounded border-none outline-none
+            focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50
+            bg-transparent w-full"
+          spellCheck={true}
+        />
 
         <div className="text-sm text-gray-500 flex gap-6">
           <span className="inline-flex items-center gap-1">
