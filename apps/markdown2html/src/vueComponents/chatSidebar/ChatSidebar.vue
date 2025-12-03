@@ -111,14 +111,39 @@ const toggleMic = () => {
       if (!stream) return
       for (const [, pc] of peerConnections.value) {
         const hasAudio = pc.getSenders().some(s => s.track && s.track.kind === 'audio')
-        if (!hasAudio) for (const track of stream.getAudioTracks()) pc.addTrack(track, stream)
+        if (!hasAudio) {
+          for (const track of stream.getAudioTracks()) {
+            pc.addTrack(track, stream)
+          }
+        } else {
+          // 如果已有发送器但轨道被禁用，重新启用
+          const senders = pc.getSenders().filter(s => s.track && s.track.kind === 'audio')
+          for (const sender of senders) {
+            if (sender.track) sender.track.enabled = true
+          }
+        }
       }
-      // 启用轨道
+      // 启用本地流的所有音频轨道
       for (const track of stream.getAudioTracks()) track.enabled = true
     } else {
-      // 关麦：仅禁用轨道（不断开连接）
+      // 关麦：从所有 RTCPeerConnection 中移除音频发送器，彻底停止发送音频
       const stream = localStream.value
-      if (stream) for (const track of stream.getAudioTracks()) track.enabled = false
+      if (stream) {
+        // 禁用本地轨道
+        for (const track of stream.getAudioTracks()) track.enabled = false
+      }
+      // 从所有 PeerConnection 中移除音频发送器
+      for (const [, pc] of peerConnections.value) {
+        const senders = pc.getSenders().filter(s => s.track && s.track.kind === 'audio')
+        for (const sender of senders) {
+          try {
+            // 移除发送器，彻底停止音频传输
+            pc.removeTrack(sender)
+          } catch (e) {
+            console.warn('移除音频发送器失败:', e)
+          }
+        }
+      }
     }
   })()
 }
@@ -139,8 +164,22 @@ const toggleDeafened = () => {
     deafened.value = true
     // 静音所有远端
     for (const [, audio] of remoteAudios.value) { audio.muted = true; audio.volume = 0 }
+    // 关闭麦克风：禁用本地轨道并从所有 PeerConnection 中移除音频发送器
     const stream = localStream.value
-    if (stream) for (const track of stream.getAudioTracks()) track.enabled = false
+    if (stream) {
+      for (const track of stream.getAudioTracks()) track.enabled = false
+    }
+    // 从所有 PeerConnection 中移除音频发送器
+    for (const [, pc] of peerConnections.value) {
+      const senders = pc.getSenders().filter(s => s.track && s.track.kind === 'audio')
+      for (const sender of senders) {
+        try {
+          pc.removeTrack(sender)
+        } catch (e) {
+          console.warn('移除音频发送器失败:', e)
+        }
+      }
+    }
   } else {
     micEnabled.value = prevBeforeDeafen.value.mic
     speakerEnabled.value = prevBeforeDeafen.value.speaker
@@ -150,10 +189,29 @@ const toggleDeafened = () => {
       audio.muted = !(speakerEnabled.value)
       audio.volume = speakerEnabled.value ? 1 : 0
     }
-    // 恢复本地轨
+    // 恢复本地轨：如果之前是开麦状态，重新添加音频轨道
     if (micEnabled.value) {
-      const stream = localStream.value
-      if (stream) for (const track of stream.getAudioTracks()) track.enabled = true
+      ;(async () => {
+        const stream = localStream.value || await ensureLocalStream()
+        if (!stream) return
+        // 启用本地轨道
+        for (const track of stream.getAudioTracks()) track.enabled = true
+        // 重新向所有 PeerConnection 添加音频轨道
+        for (const [, pc] of peerConnections.value) {
+          const hasAudio = pc.getSenders().some(s => s.track && s.track.kind === 'audio')
+          if (!hasAudio) {
+            for (const track of stream.getAudioTracks()) {
+              pc.addTrack(track, stream)
+            }
+          } else {
+            // 如果已有发送器，重新启用轨道
+            const senders = pc.getSenders().filter(s => s.track && s.track.kind === 'audio')
+            for (const sender of senders) {
+              if (sender.track) sender.track.enabled = true
+            }
+          }
+        }
+      })()
     }
   }
 }
