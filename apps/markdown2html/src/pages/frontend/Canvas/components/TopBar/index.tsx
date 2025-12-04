@@ -1,9 +1,12 @@
 import { type FC, useRef, useState, useEffect } from "react";
 import type { componentProps } from "../../interface";
-import { BookOpenCheck, Edit, Timer, Users } from "lucide-react";
+import { BookOpenCheck, Edit, Timer, Users, Upload, Download } from "lucide-react";
+import { Dropdown, Button, message } from "antd";
+import type { MenuProps } from "antd";
 import * as Y from "yjs";
+import { handleImport, handleExport, type ImportFormat, type ExportFormat } from "../../../../../utils/importExport";
 
-const TopBar: FC<componentProps> = ({ isExpended, file, ydoc, awareness }) => {
+const TopBar: FC<componentProps> = ({ isExpended, file, ydoc, awareness, editor }) => {
   const [title, setTitle] = useState(file?.title || "");
   const [onlineUsersCount, setOnlineUsersCount] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -192,9 +195,141 @@ const TopBar: FC<componentProps> = ({ isExpended, file, ydoc, awareness }) => {
         </div>
       </div>
 
-      <div className="flex items-center justify-center gap-1 text-gray-400 text-sm">
-        <BookOpenCheck className="w-4 h-4" />
-        <span>{onlineUsersCount || 1}</span>
+      <div className="flex items-center gap-4">
+        {/* 导入导出按钮组 */}
+        {editor && (
+          <div className="flex items-center gap-2">
+            {/* 导入下拉菜单 */}
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: "import-md",
+                    label: "导入 Markdown",
+                    icon: <Upload className="w-4 h-4" />,
+                    onClick: () => {
+                      const input = document.createElement("input");
+                      input.type = "file";
+                      input.accept = ".md,.markdown,.txt";
+                      input.onchange = async (e) => {
+                        const file = (e.target as HTMLInputElement).files?.[0];
+                        if (file) {
+                          try {
+                            await handleImport(file, "markdown", editor);
+                          } catch (error) {
+                            console.error("导入失败:", error);
+                          }
+                        }
+                      };
+                      input.click();
+                    },
+                  },
+                  {
+                    key: "import-pdf",
+                    label: "导入 PDF",
+                    icon: <Upload className="w-4 h-4" />,
+                    onClick: () => {
+                      const input = document.createElement("input");
+                      input.type = "file";
+                      input.accept = ".pdf";
+                      input.onchange = async (e) => {
+                        const file = (e.target as HTMLInputElement).files?.[0];
+                        if (file) {
+                          try {
+                            await handleImport(file, "pdf", editor);
+                          } catch (error) {
+                            console.error("导入失败:", error);
+                          }
+                        }
+                      };
+                      input.click();
+                    },
+                  },
+                ],
+              }}
+              trigger={["click"]}
+            >
+              <Button
+                type="default"
+                icon={<Upload className="w-4 h-4" />}
+                size="small"
+              >
+                导入
+              </Button>
+            </Dropdown>
+
+            {/* 导出下拉菜单 */}
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: "export-md",
+                    label: "导出为 Markdown",
+                    icon: <Download className="w-4 h-4" />,
+                    onClick: async () => {
+                      if (!editor) return;
+                      try {
+                        const filename = file?.title
+                          ? `${file.title}.md`
+                          : undefined;
+                        await handleExport("markdown", editor, filename);
+                      } catch (error) {
+                        console.error("导出失败:", error);
+                      }
+                    },
+                  },
+                  {
+                    key: "export-html",
+                    label: "导出为 HTML",
+                    icon: <Download className="w-4 h-4" />,
+                    onClick: async () => {
+                      if (!editor) return;
+                      try {
+                        const filename = file?.title
+                          ? `${file.title}.html`
+                          : undefined;
+                        await handleExport("html", editor, filename);
+                      } catch (error) {
+                        console.error("导出失败:", error);
+                      }
+                    },
+                  },
+                  {
+                    key: "export-pdf",
+                    label: "导出为 PDF",
+                    icon: <Download className="w-4 h-4" />,
+                    onClick: async () => {
+                      if (!editor) return;
+                      try {
+                        const filename = file?.title
+                          ? `${file.title}.pdf`
+                          : undefined;
+                        await handleExport("pdf", editor, filename);
+                      } catch (error) {
+                        console.error("导出失败:", error);
+                      }
+                    },
+                  },
+                ],
+              }}
+              trigger={["click"]}
+            >
+              <Button
+                type="primary"
+                icon={<Download className="w-4 h-4" />}
+                size="small"
+              >
+                导出
+              </Button>
+            </Dropdown>
+          </div>
+        )}
+
+        {/* 在线用户数 */}
+        <div className="flex items-center justify-center gap-1 text-gray-400 text-sm">
+          <BookOpenCheck className="w-4 h-4" />
+          <span>{onlineUsersCount || 1}</span>
+        </div>
       </div>
     </div>
   );

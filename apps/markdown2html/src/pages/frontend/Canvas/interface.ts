@@ -23,6 +23,7 @@ type componentProps = CanvasProps & {
   ydoc?: Y.Doc;
   provider?: WebsocketProvider;
   awareness?: Awareness;
+  editor?: Editor | null; // 编辑器实例，用于导入导出
   // 当编辑器标题发生变化时回调
   onHeadingsChange?: (headings: HeadingItem[]) => void;
   // 将 Tiptap editor 实例暴露给外部（用于侧边栏跳转）

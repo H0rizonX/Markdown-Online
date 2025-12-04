@@ -101,6 +101,7 @@ export const Canvas: FC<CanvasProps> = ({ file, onClose, onSelectDoc }) => {
           file={file}
           ydoc={ydoc}
           awareness={awareness}
+          editor={editor}
         />
       </div>
 
