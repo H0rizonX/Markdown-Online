@@ -73,6 +73,79 @@ function markdownToHTML(markdown: string): string {
 }
 
 /**
+ * 格式化 PDF 提取的文本
+ * 尝试识别标题、列表、段落等格式
+ */
+function formatPdfText(text: string): string {
+  let html = text;
+  
+  // 按段落分割（空行分隔）
+  const paragraphs = html.split(/\n\s*\n/).filter((p) => p.trim());
+  
+  const formatted: string[] = [];
+  
+  for (let para of paragraphs) {
+    const trimmed = para.trim();
+    if (!trimmed) continue;
+    
+    // 识别可能的标题（短行，且可能是全大写或首字母大写）
+    const lines = trimmed.split("\n");
+    if (lines.length === 1) {
+      const line = lines[0];
+      // 短行（小于 80 字符）且全大写或首字母大写，可能是标题
+      if (line.length < 80) {
+        // 检查是否全大写（排除数字和标点）
+        const letters = line.replace(/[^a-zA-Z]/g, "");
+        if (letters.length > 0) {
+          const upperRatio = letters.replace(/[^A-Z]/g, "").length / letters.length;
+          // 如果 70% 以上是大写，可能是标题
+          if (upperRatio > 0.7) {
+            formatted.push(`<h2>${line}</h2>`);
+            continue;
+          }
+          // 如果首字母大写且较短，可能是小标题
+          if (line.length < 50 && /^[A-Z]/.test(line)) {
+            formatted.push(`<h3>${line}</h3>`);
+            continue;
+          }
+        }
+      }
+    }
+    
+    // 识别列表项（以数字、字母、符号开头）
+    if (/^[\d\w\-\*•]\s+/.test(trimmed) || /^[\u2022\u2023\u25E6\u2043]/.test(trimmed)) {
+      const listItems = trimmed.split(/\n/).filter((item) => item.trim());
+      const listHTML = listItems
+        .map((item) => {
+          const cleaned = item.replace(/^[\d\w\-\*•\s\u2022\u2023\u25E6\u2043]+/, "").trim();
+          return cleaned ? `<li>${cleaned}</li>` : "";
+        })
+        .filter((item) => item)
+        .join("");
+      if (listHTML) {
+        formatted.push(`<ul>${listHTML}</ul>`);
+        continue;
+      }
+    }
+    
+    // 普通段落
+    // 如果包含多行，每行作为一个段落
+    if (lines.length > 1) {
+      lines.forEach((line) => {
+        const lineTrimmed = line.trim();
+        if (lineTrimmed) {
+          formatted.push(`<p>${lineTrimmed}</p>`);
+        }
+      });
+    } else {
+      formatted.push(`<p>${trimmed}</p>`);
+    }
+  }
+  
+  return formatted.join("\n");
+}
+
+/**
  * 导入 Markdown 文件
  */
 export async function importMarkdown(
@@ -94,32 +167,74 @@ export async function importMarkdown(
 
 /**
  * 导入 PDF 文件（提取文本）
- * 注意：浏览器端 PDF 解析能力有限，这里做基础实现
+ * 使用 pdf.js 在浏览器端解析 PDF
  */
 export async function importPDF(
   file: File,
-  _editor: Editor
+  editor: Editor
 ): Promise<void> {
   try {
-    // 使用 FileReader 读取 PDF（基础实现）
-    // 实际项目中建议使用 pdf.js 或后端解析
-    await file.arrayBuffer();
+    message.loading({ content: "正在解析 PDF 文件...", key: "pdf-import", duration: 0 });
     
-    // 简单提示：PDF 解析需要后端支持或使用 pdf.js
-    message.warning("PDF 导入功能需要后端支持，当前仅支持文本提取");
+    // 动态导入 pdfjs-dist
+    // @ts-ignore - pdfjs-dist 类型定义可能不完整
+    const pdfjsLib = await import("pdfjs-dist");
     
-    // 这里可以调用后端 API 解析 PDF
-    // const formData = new FormData();
-    // formData.append('file', file);
-    // const response = await fetch('/api/parse-pdf', { method: 'POST', body: formData });
-    // const { text } = await response.json();
-    // editor.commands.setContent(text);
+    // 设置 worker（用于 PDF 解析）
+    // 优先使用本地 worker 文件（从 public 目录），避免网络依赖
+    if (typeof window !== "undefined") {
+      // 优先使用本地 worker 文件（需要先运行 pnpm run copy-pdf-worker）
+      // @ts-ignore
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+      
+      // 如果本地文件不存在，PDF.js 会自动回退到 fake worker
+      // 为了更好的体验，可以添加错误处理
+    }
     
-    // 临时方案：提示用户
-    message.info("PDF 导入功能开发中，请使用 Markdown 格式");
+    // 读取文件为 ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer();
+    
+    // 加载 PDF 文档
+    // @ts-ignore
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+    
+    // 提取所有页面的文本
+    let fullText = "";
+    const numPages = pdf.numPages;
+    
+    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      
+      // 合并文本项
+      const pageText = textContent.items
+        .map((item) => {
+          // @ts-ignore - pdfjs-dist 类型定义
+          return item.str || "";
+        })
+        .join(" ");
+      
+      fullText += pageText;
+      
+      // 如果不是最后一页，添加换行
+      if (pageNum < numPages) {
+        fullText += "\n\n";
+      }
+    }
+    
+    // 将提取的文本导入到编辑器
+    if (fullText.trim()) {
+      // 智能格式化 PDF 文本
+      const formattedHTML = formatPdfText(fullText);
+      editor.commands.setContent(formattedHTML);
+      message.success({ content: `PDF 导入成功（共 ${numPages} 页）`, key: "pdf-import" });
+    } else {
+      message.warning({ content: "PDF 文件中没有找到可提取的文本", key: "pdf-import" });
+    }
   } catch (error) {
     console.error("导入 PDF 失败:", error);
-    message.error("导入失败，请检查文件格式");
+    message.error({ content: "导入失败，请检查文件格式或文件是否损坏", key: "pdf-import" });
     throw error;
   }
 }

@@ -2,10 +2,11 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import vue from "@vitejs/plugin-vue";
 import path from "path";
+import { copyPdfWorker } from "./vite-plugin-copy-pdf-worker";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), vue()],
+  plugins: [react(), vue(), copyPdfWorker()],
   server: {
     host: "0.0.0.0",
     port: 3002,
